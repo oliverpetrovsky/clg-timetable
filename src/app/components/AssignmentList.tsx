@@ -73,19 +73,53 @@ export default function AssignmentList({
   const [trackedMap, setTrackedMap] = useState<Record<number, string>>({});
   const [showNotionModal, setShowNotionModal] = useState(false);
 
-  // Fetch branches
+  // Fetch branches and load preference from cookies
   useEffect(() => {
     fetch('/api/branches')
       .then(res => res.json())
       .then(data => {
         const list = data.branches || [];
         setBranches(list);
+
         if (!initialBranchId && list.length > 0) {
-          setBranchId(list[0].id);
+          try {
+            const match = document.cookie.match(/clg_timetable_pref=([^;]+)/);
+            const savedStr = match ? decodeURIComponent(match[1]) : localStorage.getItem('clg_timetable_pref');
+            if (savedStr) {
+              const saved = JSON.parse(savedStr);
+              if (saved.branchId && list.some((b: any) => String(b.id) === String(saved.branchId) || String(b._id) === String(saved.branchId))) {
+                setBranchId(saved.branchId);
+                if (saved.year) setYear(Number(saved.year));
+                return;
+              }
+            }
+          } catch {}
+          setBranchId(list[0].id || list[0]._id);
         }
-      })
-      .catch(() => {});
+      });
   }, [initialBranchId]);
+
+  const handleBranchChange = (newBranchId: any) => {
+    setBranchId(newBranchId);
+    try {
+      const match = document.cookie.match(/clg_timetable_pref=([^;]+)/);
+      const existing = match ? JSON.parse(decodeURIComponent(match[1])) : {};
+      const updated = JSON.stringify({ ...existing, branchId: newBranchId, year });
+      document.cookie = `clg_timetable_pref=${encodeURIComponent(updated)}; path=/; max-age=31536000; SameSite=Lax`;
+      localStorage.setItem('clg_timetable_pref', updated);
+    } catch {}
+  };
+
+  const handleYearChange = (newYear: number) => {
+    setYear(newYear);
+    try {
+      const match = document.cookie.match(/clg_timetable_pref=([^;]+)/);
+      const existing = match ? JSON.parse(decodeURIComponent(match[1])) : {};
+      const updated = JSON.stringify({ ...existing, branchId, year: newYear });
+      document.cookie = `clg_timetable_pref=${encodeURIComponent(updated)}; path=/; max-age=31536000; SameSite=Lax`;
+      localStorage.setItem('clg_timetable_pref', updated);
+    } catch {}
+  };
 
   // Fetch tracking data if track button is enabled
   const fetchTracking = () => {
@@ -200,7 +234,7 @@ export default function AssignmentList({
               {/* Branch Select */}
               <select
                 value={branchId}
-                onChange={e => setBranchId(parseInt(e.target.value))}
+                onChange={e => handleBranchChange(e.target.value)}
                 className="select-field text-xs py-2 min-w-[190px]"
               >
                 <option value={0}>Select Branch</option>
@@ -214,7 +248,7 @@ export default function AssignmentList({
               {/* Year Select */}
               <select
                 value={year}
-                onChange={e => setYear(parseInt(e.target.value))}
+                onChange={e => handleYearChange(parseInt(e.target.value))}
                 className="select-field text-xs py-2 w-28"
               >
                 {[1, 2, 3, 4].map(y => (

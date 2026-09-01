@@ -11,12 +11,13 @@ import {
   Sparkles,
   Layers,
   ChevronRight,
-  Search
+  Search,
+  BookmarkCheck
 } from 'lucide-react';
 
 interface TimetableEntry {
-  id: number;
-  branch_id: number;
+  id: string;
+  branch_id: string;
   year: number;
   section: string;
   day_of_week: number;
@@ -31,7 +32,7 @@ interface TimetableEntry {
 }
 
 interface Branch {
-  id: number;
+  id: string;
   name: string;
   code: string;
 }
@@ -71,7 +72,7 @@ const TYPE_CONFIG: Record<string, { bg: string; text: string; border: string; la
 };
 
 interface TimetableViewProps {
-  initialBranchId?: number;
+  initialBranchId?: string | number;
   initialYear?: number;
   initialSection?: string;
   showFilters?: boolean;
@@ -85,11 +86,12 @@ export default function TimetableView({
 }: TimetableViewProps) {
   const [branches, setBranches] = useState<Branch[]>([]);
   const [entries, setEntries] = useState<TimetableEntry[]>([]);
-  const [branchId, setBranchId] = useState(initialBranchId || 0);
-  const [year, setYear] = useState(initialYear || 1);
-  const [section, setSection] = useState(initialSection || 'A');
+  const [branchId, setBranchId] = useState<string>(initialBranchId ? String(initialBranchId) : '');
+  const [year, setYear] = useState<number>(initialYear || 1);
+  const [section, setSection] = useState<string>(initialSection || 'A');
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [hasSavedPref, setHasSavedPref] = useState(false);
 
   // Default to current day of week (Monday=0, ..., Sunday=6)
   const currentDayIndex = useMemo(() => {
@@ -99,19 +101,61 @@ export default function TimetableView({
 
   const [activeDay, setActiveDay] = useState(currentDayIndex > 5 ? 0 : currentDayIndex);
 
-  // Fetch branches
+  // Load saved preference from cookie / localStorage on mount
   useEffect(() => {
     fetch('/api/branches')
       .then(res => res.json())
       .then(data => {
         const list = data.branches || [];
         setBranches(list);
+
         if (!initialBranchId && list.length > 0) {
-          setBranchId(list[0].id);
+          try {
+            // Read cookie
+            const match = document.cookie.match(/clg_timetable_pref=([^;]+)/);
+            const savedStr = match ? decodeURIComponent(match[1]) : localStorage.getItem('clg_timetable_pref');
+            if (savedStr) {
+              const saved = JSON.parse(savedStr);
+              if (saved.branchId && list.some((b: any) => String(b.id) === String(saved.branchId) || String(b._id) === String(saved.branchId))) {
+                setBranchId(String(saved.branchId));
+                if (saved.year) setYear(Number(saved.year));
+                if (saved.section) setSection(String(saved.section));
+                setHasSavedPref(true);
+                return;
+              }
+            }
+          } catch {}
+          setBranchId(String(list[0].id || list[0]._id));
         }
       })
       .catch(() => {});
   }, [initialBranchId]);
+
+  // Persist preference to cookies when filters change
+  const savePreferenceCookie = (bId: string, y: number, s: string) => {
+    if (!bId) return;
+    try {
+      const pref = JSON.stringify({ branchId: bId, year: y, section: s });
+      document.cookie = `clg_timetable_pref=${encodeURIComponent(pref)}; path=/; max-age=31536000; SameSite=Lax`;
+      localStorage.setItem('clg_timetable_pref', pref);
+      setHasSavedPref(true);
+    } catch {}
+  };
+
+  const handleBranchChange = (newBranchId: string) => {
+    setBranchId(newBranchId);
+    savePreferenceCookie(newBranchId, year, section);
+  };
+
+  const handleYearChange = (newYear: number) => {
+    setYear(newYear);
+    savePreferenceCookie(branchId, newYear, section);
+  };
+
+  const handleSectionChange = (newSection: string) => {
+    setSection(newSection);
+    savePreferenceCookie(branchId, year, newSection);
+  };
 
   // Fetch timetable entries
   useEffect(() => {
@@ -181,10 +225,10 @@ export default function TimetableView({
             {/* Branch Select */}
             <select
               value={branchId}
-              onChange={e => setBranchId(parseInt(e.target.value))}
+              onChange={e => handleBranchChange(e.target.value)}
               className="select-field text-xs py-2 min-w-[200px]"
             >
-              <option value={0}>Select Branch</option>
+              <option value="">Select Branch</option>
               {branches.map(b => (
                 <option key={b.id} value={b.id}>
                   {b.code} — {b.name}
@@ -195,7 +239,7 @@ export default function TimetableView({
             {/* Year Select */}
             <select
               value={year}
-              onChange={e => setYear(parseInt(e.target.value))}
+              onChange={e => handleYearChange(parseInt(e.target.value))}
               className="select-field text-xs py-2 w-28"
             >
               {[1, 2, 3, 4].map(y => (
@@ -206,13 +250,20 @@ export default function TimetableView({
             {/* Section Select */}
             <select
               value={section}
-              onChange={e => setSection(e.target.value)}
+              onChange={e => handleSectionChange(e.target.value)}
               className="select-field text-xs py-2 w-28"
             >
               {['A', 'B', 'C', 'D'].map(s => (
                 <option key={s} value={s}>Section {s}</option>
               ))}
             </select>
+
+            {hasSavedPref && (
+              <span className="hidden lg:inline-flex items-center gap-1 text-[11px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">
+                <BookmarkCheck className="w-3 h-3 text-blue-600" />
+                Saved default
+              </span>
+            )}
           </div>
 
           {/* Quick Search */}
@@ -294,7 +345,7 @@ export default function TimetableView({
         </div>
       ) : (
         <div className="space-y-3">
-          {dayEntries.map((entry, index) => {
+          {dayEntries.map((entry) => {
             const isLive = isClassNow(entry.day_of_week, entry.start_time, entry.end_time);
             const duration = getDuration(entry.start_time, entry.end_time);
             const config = TYPE_CONFIG[entry.type] || TYPE_CONFIG.lecture;

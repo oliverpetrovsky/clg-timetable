@@ -75,15 +75,32 @@ async function seedDefaultDataIfEmpty(mongooseInstance: typeof mongoose) {
     ]);
   }
 
-  const superAdmin = await User.findOne({ email: 'admin@college.edu' });
-  if (!superAdmin) {
-    console.log('🌱 Seeding super admin account (admin@college.edu / admin123)...');
-    const hash = await bcrypt.hash('admin123', 12);
+  // Seed / ensure IIIT-B class rep admin account
+  const classRepAdmin = await User.findOne({ email: 'classreps@iiitb.ac.in' });
+  if (!classRepAdmin) {
+    console.log('🌱 Creating IIIT-B Class Rep Admin (classreps@iiitb.ac.in)...');
+    const adminHash = await bcrypt.hash('tbsm-naamsujal-vichaar-Vy0m', 12);
     await User.create({
-      name: 'Super Admin',
-      email: 'admin@college.edu',
-      passwordHash: hash,
+      name: 'IIIT-B Class Reps',
+      email: 'classreps@iiitb.ac.in',
+      passwordHash: adminHash,
       role: 'superadmin',
+    });
+  }
+
+  // Also ensure demo student account for IIIT-B
+  const student = await User.findOne({ email: 'student@iiitb.ac.in' });
+  if (!student) {
+    const cseBranch = await Branch.findOne({ code: 'CSE' });
+    const studentHash = await bcrypt.hash('student123', 12);
+    await User.create({
+      name: 'IIIT-B Student',
+      email: 'student@iiitb.ac.in',
+      passwordHash: studentHash,
+      role: 'student',
+      branchId: cseBranch ? cseBranch._id : undefined,
+      year: 2,
+      section: 'A',
     });
   }
 }

@@ -8,7 +8,8 @@ const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || 'default-secret-change-me-in-production-random-key'
 );
 
-const ALLOWED_DOMAIN = process.env.ALLOWED_EMAIL_DOMAIN || '*';
+// Defaults to IIIT-B domain restriction
+const ALLOWED_DOMAIN = process.env.ALLOWED_EMAIL_DOMAIN || 'iiitb.ac.in';
 
 export interface UserPayload {
   id: string;
@@ -21,8 +22,10 @@ export interface UserPayload {
 }
 
 export function isAllowedEmail(email: string): boolean {
-  if (ALLOWED_DOMAIN === '*' || !ALLOWED_DOMAIN) return true;
-  return email.toLowerCase().endsWith(`@${ALLOWED_DOMAIN.toLowerCase()}`);
+  if (ALLOWED_DOMAIN === '*') return true;
+  const domain = ALLOWED_DOMAIN.toLowerCase().trim();
+  const lowerEmail = email.toLowerCase().trim();
+  return lowerEmail.endsWith(`@${domain}`) || lowerEmail.endsWith(`.${domain}`);
 }
 
 export async function hashPassword(password: string): Promise<string> {

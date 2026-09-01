@@ -129,7 +129,12 @@ export default function RegisterPage() {
 
             {/* Email */}
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1.5">College Email</label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-medium text-slate-700">College Email</label>
+                <span className="text-[10px] text-blue-600 font-semibold bg-blue-50 px-2 py-0.5 rounded-full">
+                  @iiitb.ac.in only
+                </span>
+              </div>
               <div className="relative">
                 <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
@@ -137,10 +142,11 @@ export default function RegisterPage() {
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   className="input-field pl-10 text-xs"
-                  placeholder="alex@college.edu"
+                  placeholder="rollnumber@iiitb.ac.in"
                   required
                 />
               </div>
+              <p className="text-[11px] text-slate-400 mt-1">Must be your registered IIIT-B college email address</p>
             </div>
 
             {/* Password */}

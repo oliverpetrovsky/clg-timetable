@@ -1,3 +1,6 @@
+'use client';
+
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Navbar from './components/Navbar';
 import { 
@@ -8,14 +11,44 @@ import {
   ArrowRight, 
   Sparkles, 
   CheckCircle2, 
-  Zap, 
   Clock, 
   RefreshCw,
   Layers,
-  ChevronRight
+  ChevronRight,
+  BookmarkCheck,
+  LayoutDashboard
 } from 'lucide-react';
 
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+}
+
 export default function Home() {
+  const [user, setUser] = useState<User | null>(null);
+  const [savedPref, setSavedPref] = useState<{ branchId?: string; year?: number; section?: string } | null>(null);
+
+  useEffect(() => {
+    // Check auth status
+    fetch('/api/auth/me')
+      .then(res => res.json())
+      .then(data => {
+        if (data.user) setUser(data.user);
+      })
+      .catch(() => {});
+
+    // Check saved timetable cookie
+    try {
+      const match = document.cookie.match(/clg_timetable_pref=([^;]+)/);
+      const savedStr = match ? decodeURIComponent(match[1]) : localStorage.getItem('clg_timetable_pref');
+      if (savedStr) {
+        setSavedPref(JSON.parse(savedStr));
+      }
+    } catch {}
+  }, []);
+
   return (
     <>
       <Navbar />
@@ -34,7 +67,7 @@ export default function Home() {
               {/* Top pill badge */}
               <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900 text-white text-xs font-medium shadow-sm animate-fade-in">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span>Next-Gen College Timetable & Assignment Hub</span>
+                <span>IIIT-B Timetable & Assignment Portal</span>
                 <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
               </div>
 
@@ -51,24 +84,47 @@ export default function Home() {
                 Stay on top of lectures, labs, and assignment deadlines. Personalize your student dashboard and sync directly with your Notion workspace in one click.
               </p>
 
-              {/* CTA Buttons */}
+              {/* Dynamic CTA Buttons */}
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
-                <Link
-                  href="/timetable"
-                  className="w-full sm:w-auto btn-primary text-sm py-3 px-6 shadow-md flex items-center justify-center gap-2"
-                >
-                  <Calendar className="w-4 h-4" />
-                  <span>View Timetable</span>
-                  <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full font-normal">Free</span>
-                </Link>
+                {user ? (
+                  <>
+                    <Link
+                      href="/dashboard"
+                      className="w-full sm:w-auto btn-primary text-sm py-3 px-6 shadow-md flex items-center justify-center gap-2"
+                    >
+                      <LayoutDashboard className="w-4 h-4" />
+                      <span>Go to Dashboard</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </Link>
 
-                <Link
-                  href="/register"
-                  className="w-full sm:w-auto btn-secondary text-sm py-3 px-6 shadow-xs flex items-center justify-center gap-2"
-                >
-                  <span>Student Sign Up</span>
-                  <ArrowRight className="w-4 h-4 text-slate-400" />
-                </Link>
+                    <Link
+                      href="/timetable"
+                      className="w-full sm:w-auto btn-secondary text-sm py-3 px-6 shadow-xs flex items-center justify-center gap-2"
+                    >
+                      <Calendar className="w-4 h-4" />
+                      <span>View Timetable</span>
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    <Link
+                      href="/timetable"
+                      className="w-full sm:w-auto btn-primary text-sm py-3 px-6 shadow-md flex items-center justify-center gap-2"
+                    >
+                      <Calendar className="w-4 h-4" />
+                      <span>View Timetable</span>
+                      <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full font-normal">Free</span>
+                    </Link>
+
+                    <Link
+                      href="/register"
+                      className="w-full sm:w-auto btn-secondary text-sm py-3 px-6 shadow-xs flex items-center justify-center gap-2"
+                    >
+                      <span>Student Sign Up</span>
+                      <ArrowRight className="w-4 h-4 text-slate-400" />
+                    </Link>
+                  </>
+                )}
               </div>
 
               {/* Micro proof tags */}
@@ -78,12 +134,12 @@ export default function Home() {
                   No login required for timetable
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  Notion 2-Way Sync
+                  <BookmarkCheck className="w-4 h-4 text-blue-600" />
+                  Remembers your class view
                 </span>
                 <span className="flex items-center gap-1.5">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  Branch Admin Managed
+                  Notion 2-Way Task Sync
                 </span>
               </div>
 
@@ -101,39 +157,44 @@ export default function Home() {
                       <span className="w-2.5 h-2.5 rounded-full bg-amber-400/80" />
                       <span className="w-2.5 h-2.5 rounded-full bg-emerald-400/80" />
                     </div>
-                    <span className="text-xs font-mono text-slate-400 ml-2">CSE Year 2 • Monday Schedule</span>
+                    <span className="text-xs font-mono text-slate-500 ml-2 font-medium">
+                      CSE Year 2 • Section A Schedule
+                    </span>
                   </div>
-                  <span className="badge bg-emerald-50 text-emerald-700 border-emerald-200 text-[11px]">
+                  <Link
+                    href="/timetable"
+                    className="badge bg-emerald-50 text-emerald-700 border-emerald-200 text-[11px] hover:bg-emerald-100 transition-colors"
+                  >
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1" />
-                    Live Class
-                  </span>
+                    Interactive Schedule →
+                  </Link>
                 </div>
 
                 {/* Mockup Classes Preview */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <div className="card p-4 bg-white border-blue-200/80 ring-1 ring-blue-500/10">
+                  <Link href="/timetable" className="card p-4 bg-white border-blue-200/80 ring-1 ring-blue-500/10 hover:shadow-md transition-all">
                     <span className="badge badge-lecture text-[10px]">Lecture</span>
                     <h4 className="font-semibold text-sm text-slate-900 mt-2">Data Structures & Algorithms</h4>
                     <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
                       <Clock className="w-3 h-3" /> 09:00 - 10:00 AM • Room 301
                     </p>
-                  </div>
+                  </Link>
 
-                  <div className="card p-4 bg-white border-purple-200/80">
+                  <Link href="/timetable" className="card p-4 bg-white border-purple-200/80 hover:shadow-md transition-all">
                     <span className="badge badge-tutorial text-[10px]">Tutorial</span>
                     <h4 className="font-semibold text-sm text-slate-900 mt-2">Discrete Mathematics</h4>
                     <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
                       <Clock className="w-3 h-3" /> 10:00 - 11:00 AM • Room 302
                     </p>
-                  </div>
+                  </Link>
 
-                  <div className="card p-4 bg-white border-emerald-200/80">
+                  <Link href="/timetable" className="card p-4 bg-white border-emerald-200/80 hover:shadow-md transition-all">
                     <span className="badge badge-lab text-[10px]">Lab Session</span>
                     <h4 className="font-semibold text-sm text-slate-900 mt-2">DSA Practical Lab</h4>
                     <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
                       <Clock className="w-3 h-3" /> 01:00 - 03:00 PM • Lab 201
                     </p>
-                  </div>
+                  </Link>
                 </div>
 
               </div>
@@ -185,8 +246,8 @@ export default function Home() {
                 </ul>
 
                 <div className="pt-2">
-                  <Link href="/register" className="btn-primary text-xs py-2.5 px-4 shadow-sm">
-                    Try Notion Sync Now
+                  <Link href={user ? '/dashboard' : '/register'} className="btn-primary text-xs py-2.5 px-4 shadow-sm">
+                    {user ? 'Open Notion Hub' : 'Try Notion Sync Now'}
                   </Link>
                 </div>
               </div>
@@ -235,7 +296,7 @@ export default function Home() {
                 </div>
 
                 <p className="text-[11px] text-slate-400 text-center pt-2">
-                  Synced 11 assignments automatically into Notion
+                  Synced assignments automatically into Notion
                 </p>
               </div>
 
@@ -248,7 +309,7 @@ export default function Home() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center max-w-2xl mx-auto mb-12">
               <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
-                Engineered for college students & branch admins
+                Engineered for IIIT-B students & class reps
               </h2>
               <p className="text-xs sm:text-sm text-slate-500 mt-2">
                 Fast, responsive, and minimalist. Everything you need with zero clutter.
@@ -291,9 +352,9 @@ export default function Home() {
                 <div className="w-10 h-10 rounded-2xl bg-slate-900 text-white flex items-center justify-center">
                   <Shield className="w-5 h-5" />
                 </div>
-                <h3 className="text-base font-semibold text-slate-900">Branch Admins</h3>
+                <h3 className="text-base font-semibold text-slate-900">Class Rep Admins</h3>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  Designated branch admins keep timetable entries and assignments up-to-date with instant student alerts.
+                  Designated class reps keep timetable entries and assignments up-to-date with instant student alerts.
                 </p>
               </div>
 
@@ -311,8 +372,8 @@ export default function Home() {
               Check your classes, track assignments, and streamline your schedule in seconds.
             </p>
             <div className="flex flex-wrap items-center justify-center gap-3">
-              <Link href="/register" className="btn-accent text-xs py-3 px-6 shadow-md">
-                Create Free Account
+              <Link href={user ? '/dashboard' : '/register'} className="btn-accent text-xs py-3 px-6 shadow-md">
+                {user ? 'Open Dashboard' : 'Create Student Account'}
               </Link>
               <Link href="/timetable" className="btn-secondary text-xs py-3 px-6 bg-slate-800 text-white border-slate-700 hover:bg-slate-700">
                 Explore Timetable
@@ -329,9 +390,9 @@ export default function Home() {
           <div className="flex items-center gap-2">
             <span className="font-bold text-slate-900">TimeTrack</span>
             <span>•</span>
-            <span>College Timetable & Assignment Management</span>
+            <span>IIIT-B Timetable & Assignment Hub</span>
           </div>
-          <p>© {new Date().getFullYear()} College Timetable Tracker. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} IIIT-B Timetable Tracker. All rights reserved.</p>
         </div>
       </footer>
     </>

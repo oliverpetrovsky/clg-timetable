@@ -85,30 +85,22 @@ export default function LoginPage() {
                 Quick 1-Click Demo Login
               </span>
             </div>
-            <div className="grid grid-cols-3 gap-1.5">
+            <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
-                onClick={() => fillQuickAccount('student@college.edu', 'student123')}
-                className="text-[10px] font-medium bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 py-1.5 px-2 rounded-xl text-center truncate transition-colors"
-                title="student@college.edu / student123"
+                onClick={() => fillQuickAccount('classreps@iiitb.ac.in', 'tbsm-naamsujal-vichaar-Vy0m')}
+                className="text-[11px] font-medium bg-white hover:bg-slate-100 text-slate-900 border border-slate-200 py-2 px-2.5 rounded-xl text-center truncate transition-colors flex items-center justify-center gap-1.5 shadow-2xs"
+                title="classreps@iiitb.ac.in"
               >
-                👨‍🎓 Student
+                👑 <strong>Admin (Class Reps)</strong>
               </button>
               <button
                 type="button"
-                onClick={() => fillQuickAccount('cse.admin@college.edu', 'branch123')}
-                className="text-[10px] font-medium bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 py-1.5 px-2 rounded-xl text-center truncate transition-colors"
-                title="cse.admin@college.edu / branch123"
+                onClick={() => fillQuickAccount('student@iiitb.ac.in', 'student123')}
+                className="text-[11px] font-medium bg-white hover:bg-slate-100 text-slate-900 border border-slate-200 py-2 px-2.5 rounded-xl text-center truncate transition-colors flex items-center justify-center gap-1.5 shadow-2xs"
+                title="student@iiitb.ac.in"
               >
-                🏢 CSE Admin
-              </button>
-              <button
-                type="button"
-                onClick={() => fillQuickAccount('admin@college.edu', 'admin123')}
-                className="text-[10px] font-medium bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 py-1.5 px-2 rounded-xl text-center truncate transition-colors"
-                title="admin@college.edu / admin123"
-              >
-                👑 Super Admin
+                👨‍🎓 <strong>IIIT-B Student</strong>
               </button>
             </div>
           </div>
