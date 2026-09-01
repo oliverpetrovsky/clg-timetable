@@ -19,7 +19,8 @@ import {
 } from 'lucide-react';
 
 interface Branch {
-  id: number;
+  id: string;
+  _id?: string;
   name: string;
   code: string;
 }
@@ -29,7 +30,7 @@ export default function RegisterPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [branchId, setBranchId] = useState(0);
+  const [branchId, setBranchId] = useState<string>('');
   const [year, setYear] = useState(1);
   const [section, setSection] = useState('A');
   const [branches, setBranches] = useState<Branch[]>([]);
@@ -43,7 +44,9 @@ export default function RegisterPage() {
       .then(data => {
         const list = data.branches || [];
         setBranches(list);
-        if (list.length > 0) setBranchId(list[0].id);
+        if (list.length > 0) {
+          setBranchId(String(list[0].id || list[0]._id));
+        }
       })
       .catch(() => {});
   }, []);
@@ -180,13 +183,13 @@ export default function RegisterPage() {
                 <Building2 className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <select
                   value={branchId}
-                  onChange={e => setBranchId(parseInt(e.target.value))}
+                  onChange={e => setBranchId(e.target.value)}
                   className="select-field pl-10 text-xs"
                   required
                 >
-                  <option value={0}>Select your branch</option>
+                  <option value="">Select your branch</option>
                   {branches.map(b => (
-                    <option key={b.id} value={b.id}>
+                    <option key={b.id || b._id} value={b.id || b._id}>
                       {b.code} — {b.name}
                     </option>
                   ))}

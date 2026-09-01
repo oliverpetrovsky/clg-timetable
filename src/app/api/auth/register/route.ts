@@ -37,13 +37,21 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Resolve branch ID if passed as string/code
+    // Resolve branch ID if passed as string/code or fallback to first branch
     let branchObjectId: mongoose.Types.ObjectId | undefined;
-    if (mongoose.Types.ObjectId.isValid(branchId.toString())) {
-      branchObjectId = new mongoose.Types.ObjectId(branchId.toString());
-    } else {
-      const bDoc = await Branch.findOne({ $or: [{ code: branchId.toString().toUpperCase() }, { name: branchId.toString() }] });
-      if (bDoc) branchObjectId = bDoc._id as mongoose.Types.ObjectId;
+    if (branchId) {
+      const bStr = branchId.toString().trim();
+      if (mongoose.Types.ObjectId.isValid(bStr)) {
+        branchObjectId = new mongoose.Types.ObjectId(bStr);
+      } else {
+        const bDoc = await Branch.findOne({ $or: [{ code: bStr.toUpperCase() }, { name: bStr }] });
+        if (bDoc) branchObjectId = bDoc._id as mongoose.Types.ObjectId;
+      }
+    }
+
+    if (!branchObjectId) {
+      const defaultBranch = await Branch.findOne().sort({ code: 1 });
+      if (defaultBranch) branchObjectId = defaultBranch._id as mongoose.Types.ObjectId;
     }
 
     const passwordHash = await hashPassword(password);
@@ -54,8 +62,8 @@ export async function POST(req: NextRequest) {
       passwordHash,
       role: 'student',
       branchId: branchObjectId,
-      year,
-      section: section || 'A',
+      year: year || 1,
+      section: (section || 'A').toUpperCase().trim(),
     });
 
     const token = await createToken({

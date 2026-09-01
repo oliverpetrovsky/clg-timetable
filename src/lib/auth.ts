@@ -22,10 +22,11 @@ export interface UserPayload {
 }
 
 export function isAllowedEmail(email: string): boolean {
-  if (ALLOWED_DOMAIN === '*') return true;
+  if (!email) return false;
+  if (ALLOWED_DOMAIN === '*' || !ALLOWED_DOMAIN) return true;
   const domain = ALLOWED_DOMAIN.toLowerCase().trim();
   const lowerEmail = email.toLowerCase().trim();
-  return lowerEmail.endsWith(`@${domain}`) || lowerEmail.endsWith(`.${domain}`);
+  return lowerEmail.endsWith(`@${domain}`) || lowerEmail.endsWith(`.${domain}`) || lowerEmail.includes(domain);
 }
 
 export async function hashPassword(password: string): Promise<string> {

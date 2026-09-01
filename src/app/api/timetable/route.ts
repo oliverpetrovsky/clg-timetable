@@ -147,6 +147,52 @@ export async function POST(req: NextRequest) {
   }
 }
 
+export async function PUT(req: NextRequest) {
+  const user = await getCurrentUser();
+  if (!user || (user.role !== 'admin' && user.role !== 'superadmin')) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+  }
+
+  try {
+    const body = await req.json();
+    const { id, ...updates } = body;
+
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return NextResponse.json({ error: 'Valid entry ID is required' }, { status: 400 });
+    }
+
+    await connectToDatabase();
+
+    const entry = await TimetableEntry.findById(id);
+    if (!entry) {
+      return NextResponse.json({ error: 'Timetable entry not found' }, { status: 404 });
+    }
+
+    if (user.role === 'admin' && user.branchId && entry.branchId.toString() !== user.branchId) {
+      return NextResponse.json({ error: 'You can only edit entries for your own branch' }, { status: 403 });
+    }
+
+    const updateFields: Record<string, any> = {};
+    if (updates.subject) updateFields.subject = updates.subject;
+    if (updates.teacher !== undefined) updateFields.teacher = updates.teacher || null;
+    if (updates.room !== undefined) updateFields.room = updates.room || null;
+    if (updates.startTime || updates.start_time) updateFields.startTime = updates.startTime || updates.start_time;
+    if (updates.endTime || updates.end_time) updateFields.endTime = updates.endTime || updates.end_time;
+    if (updates.dayOfWeek !== undefined || updates.day_of_week !== undefined) {
+      updateFields.dayOfWeek = updates.dayOfWeek !== undefined ? updates.dayOfWeek : updates.day_of_week;
+    }
+    if (updates.type) updateFields.type = updates.type;
+    if (updates.year) updateFields.year = Number(updates.year);
+    if (updates.section) updateFields.section = updates.section;
+
+    await TimetableEntry.findByIdAndUpdate(id, { $set: updateFields });
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    console.error('Timetable update error:', error);
+    return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
+  }
+}
+
 export async function DELETE(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user || (user.role !== 'admin' && user.role !== 'superadmin')) {

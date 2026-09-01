@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Navbar from '../components/Navbar';
 import { 
   Plus, 
   Trash2, 
+  Edit3, 
   Users, 
   BookOpen, 
   Calendar, 
@@ -18,24 +19,59 @@ import {
   CheckCircle2, 
   AlertCircle,
   Search,
+  Clock,
+  MapPin,
+  User as UserIcon,
   Layers,
-  Sparkles
+  Sparkles,
+  RefreshCw
 } from 'lucide-react';
 
 interface User {
-  id: number;
+  id: string;
   name: string;
   email: string;
   role: string;
-  branchId: number | null;
+  branchId: string | null;
   year: number | null;
   section: string | null;
 }
 
 interface Branch {
-  id: number;
+  id: string;
+  _id?: string;
   name: string;
   code: string;
+}
+
+interface TimetableEntry {
+  id: string;
+  _id?: string;
+  branchId: string;
+  year: number;
+  section: string;
+  dayOfWeek: number;
+  startTime: string;
+  endTime: string;
+  subject: string;
+  teacher?: string | null;
+  room?: string | null;
+  type: string;
+  branch_code?: string;
+}
+
+interface Assignment {
+  id: string;
+  _id?: string;
+  branchId: string;
+  year: number;
+  section?: string | null;
+  subject: string;
+  title: string;
+  description?: string | null;
+  dueDate: string;
+  priority: string;
+  status: string;
 }
 
 interface Stats {
@@ -45,25 +81,39 @@ interface Stats {
   totalEntries: number;
 }
 
-const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 export default function AdminPage() {
   const [user, setUser] = useState<User | null>(null);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'users'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'timetable' | 'assignments' | 'users'>('overview');
   const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState<'timetable' | 'assignment' | null>(null);
-  const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState({ text: '', type: '' });
-  const [userSearch, setUserSearch] = useState('');
+  const [saving, setSaving] = useState(false);
   const router = useRouter();
 
-  // Form states for timetable
-  const [ttBranchId, setTtBranchId] = useState(0);
-  const [ttYear, setTtYear] = useState(1);
-  const [ttSection, setTtSection] = useState('A');
-  const [ttDay, setTtDay] = useState(0);
+  // Selected filters for timetable & assignment management
+  const [mgmtBranchId, setMgmtBranchId] = useState<string>('');
+  const [mgmtYear, setMgmtYear] = useState<number>(2);
+  const [mgmtSection, setMgmtSection] = useState<string>('A');
+
+  // Loaded items
+  const [timetableEntries, setTimetableEntries] = useState<TimetableEntry[]>([]);
+  const [assignmentsList, setAssignmentsList] = useState<Assignment[]>([]);
+  const [usersList, setUsersList] = useState<any[]>([]);
+  const [userSearch, setUserSearch] = useState('');
+  const [loadingItems, setLoadingItems] = useState(false);
+
+  // Modals state
+  const [showModal, setShowModal] = useState<'create_tt' | 'edit_tt' | 'create_as' | 'edit_as' | null>(null);
+  const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
+
+  // Timetable Form
+  const [ttBranchId, setTtBranchId] = useState<string>('');
+  const [ttYear, setTtYear] = useState<number>(2);
+  const [ttSection, setTtSection] = useState<string>('A');
+  const [ttDay, setTtDay] = useState<number>(0);
   const [ttStartTime, setTtStartTime] = useState('09:00');
   const [ttEndTime, setTtEndTime] = useState('10:00');
   const [ttSubject, setTtSubject] = useState('');
@@ -71,17 +121,54 @@ export default function AdminPage() {
   const [ttRoom, setTtRoom] = useState('');
   const [ttType, setTtType] = useState('lecture');
 
-  // Form states for assignment
-  const [asBranchId, setAsBranchId] = useState(0);
-  const [asYear, setAsYear] = useState(1);
+  // Assignment Form
+  const [asBranchId, setAsBranchId] = useState<string>('');
+  const [asYear, setAsYear] = useState<number>(2);
+  const [asSection, setAsSection] = useState<string>('A');
   const [asSubject, setAsSubject] = useState('');
   const [asTitle, setAsTitle] = useState('');
   const [asDescription, setAsDescription] = useState('');
   const [asDueDate, setAsDueDate] = useState('');
   const [asPriority, setAsPriority] = useState('medium');
+  const [asStatus, setAsStatus] = useState('active');
 
-  // Users list (superadmin only)
-  const [usersList, setUsersList] = useState<any[]>([]);
+  const fetchStats = useCallback(async () => {
+    try {
+      const res = await fetch('/api/admin/stats');
+      const data = await res.json();
+      if (data.stats) setStats(data.stats);
+    } catch {}
+  }, []);
+
+  const fetchUsers = useCallback(async () => {
+    try {
+      const res = await fetch('/api/admin/users');
+      const data = await res.json();
+      if (data.users) setUsersList(data.users);
+    } catch {}
+  }, []);
+
+  const fetchTimetable = useCallback(async (bId: string, y: number, s: string) => {
+    if (!bId) return;
+    setLoadingItems(true);
+    try {
+      const res = await fetch(`/api/timetable?branchId=${bId}&year=${y}&section=${s}`);
+      const data = await res.json();
+      setTimetableEntries(data.entries || []);
+    } catch {}
+    setLoadingItems(false);
+  }, []);
+
+  const fetchAssignments = useCallback(async (bId: string, y: number) => {
+    if (!bId) return;
+    setLoadingItems(true);
+    try {
+      const res = await fetch(`/api/assignments?branchId=${bId}&year=${y}&status=all`);
+      const data = await res.json();
+      setAssignmentsList(data.assignments || []);
+    } catch {}
+    setLoadingItems(false);
+  }, []);
 
   useEffect(() => {
     Promise.all([
@@ -89,631 +176,1001 @@ export default function AdminPage() {
       fetch('/api/branches').then(r => r.json()),
     ]).then(([userData, branchData]) => {
       if (!userData.user || (userData.user.role !== 'admin' && userData.user.role !== 'superadmin')) {
-        router.push('/');
+        router.push('/login');
         return;
       }
       setUser(userData.user);
       const bList = branchData.branches || [];
       setBranches(bList);
 
-      // Set default branch for admins
-      if (userData.user.role === 'admin' && userData.user.branchId) {
-        setTtBranchId(userData.user.branchId);
-        setAsBranchId(userData.user.branchId);
-      } else if (bList.length > 0) {
-        setTtBranchId(bList[0].id);
-        setAsBranchId(bList[0].id);
+      const defaultBranch = userData.user.role === 'admin' && userData.user.branchId
+        ? String(userData.user.branchId)
+        : (bList[0]?.id || bList[0]?._id || '');
+
+      setMgmtBranchId(defaultBranch);
+      setTtBranchId(defaultBranch);
+      setAsBranchId(defaultBranch);
+
+      fetchStats();
+      if (defaultBranch) {
+        fetchTimetable(defaultBranch, 2, 'A');
+        fetchAssignments(defaultBranch, 2);
       }
-
-      // Fetch stats
-      fetch('/api/admin/stats').then(r => r.json()).then(d => setStats(d.stats));
-
-      // Fetch users if superadmin
       if (userData.user.role === 'superadmin') {
-        fetch('/api/admin/users').then(r => r.json()).then(d => setUsersList(d.users || []));
+        fetchUsers();
       }
-
       setLoading(false);
-    }).catch(() => router.push('/login'));
-  }, [router]);
+    }).catch(() => {
+      setLoading(false);
+    });
+  }, [router, fetchStats, fetchUsers, fetchTimetable, fetchAssignments]);
 
-  const showToast = (text: string, type: 'success' | 'error') => {
-    setMessage({ text, type });
-    setTimeout(() => setMessage({ text: '', type: '' }), 3500);
+  const handleBranchChange = (bId: string) => {
+    setMgmtBranchId(bId);
+    setTtBranchId(bId);
+    setAsBranchId(bId);
+    fetchTimetable(bId, mgmtYear, mgmtSection);
+    fetchAssignments(bId, mgmtYear);
   };
 
-  const handleAddTimetable = async (e: React.FormEvent) => {
+  const handleYearChange = (y: number) => {
+    setMgmtYear(y);
+    setTtYear(y);
+    setAsYear(y);
+    fetchTimetable(mgmtBranchId, y, mgmtSection);
+    fetchAssignments(mgmtBranchId, y);
+  };
+
+  const handleSectionChange = (s: string) => {
+    setMgmtSection(s);
+    setTtSection(s);
+    fetchTimetable(mgmtBranchId, mgmtYear, s);
+  };
+
+  // Open Edit Timetable Modal
+  const openEditTimetable = (entry: TimetableEntry) => {
+    setEditingEntryId(entry.id || entry._id || '');
+    setTtBranchId(entry.branchId || mgmtBranchId);
+    setTtYear(entry.year || mgmtYear);
+    setTtSection(entry.section || 'A');
+    setTtDay(entry.dayOfWeek ?? 0);
+    setTtStartTime(entry.startTime || '09:00');
+    setTtEndTime(entry.endTime || '10:00');
+    setTtSubject(entry.subject || '');
+    setTtTeacher(entry.teacher || '');
+    setTtRoom(entry.room || '');
+    setTtType(entry.type || 'lecture');
+    setShowModal('edit_tt');
+  };
+
+  // Open Edit Assignment Modal
+  const openEditAssignment = (as: Assignment) => {
+    setEditingEntryId(as.id || as._id || '');
+    setAsBranchId(as.branchId || mgmtBranchId);
+    setAsYear(as.year || mgmtYear);
+    setAsSection(as.section || 'A');
+    setAsSubject(as.subject || '');
+    setAsTitle(as.title || '');
+    setAsDescription(as.description || '');
+    setAsDueDate(as.dueDate || '');
+    setAsPriority(as.priority || 'medium');
+    setAsStatus(as.status || 'active');
+    setShowModal('edit_as');
+  };
+
+  // Save Timetable (Create or Update)
+  const handleSaveTimetable = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
+    setMessage({ text: '', type: '' });
+
+    const payload = {
+      branchId: ttBranchId,
+      year: ttYear,
+      section: ttSection.trim() || 'A',
+      dayOfWeek: Number(ttDay),
+      startTime: ttStartTime,
+      endTime: ttEndTime,
+      subject: ttSubject.trim(),
+      teacher: ttTeacher.trim() || null,
+      room: ttRoom.trim() || null,
+      type: ttType,
+    };
+
     try {
+      const isEdit = showModal === 'edit_tt' && editingEntryId;
       const res = await fetch('/api/timetable', {
-        method: 'POST',
+        method: isEdit ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          branchId: ttBranchId,
-          year: ttYear,
-          section: ttSection,
-          dayOfWeek: ttDay,
-          startTime: ttStartTime,
-          endTime: ttEndTime,
-          subject: ttSubject,
-          teacher: ttTeacher || null,
-          room: ttRoom || null,
-          type: ttType,
-        }),
+        body: JSON.stringify(isEdit ? { id: editingEntryId, ...payload } : payload),
       });
 
-      if (res.ok) {
-        showToast('Timetable class entry added successfully!', 'success');
-        setShowModal(null);
-        setTtSubject('');
-        setTtTeacher('');
-        setTtRoom('');
-        // Refresh stats
-        fetch('/api/admin/stats').then(r => r.json()).then(d => setStats(d.stats));
+      const data = await res.json();
+      if (!res.ok) {
+        setMessage({ text: data.error || 'Failed to save timetable class', type: 'error' });
       } else {
-        const data = await res.json();
-        showToast(data.error || 'Failed to add entry.', 'error');
+        setMessage({ text: isEdit ? 'Class updated successfully!' : 'New class added to timetable!', type: 'success' });
+        setShowModal(null);
+        fetchTimetable(mgmtBranchId, mgmtYear, mgmtSection);
+        fetchStats();
       }
     } catch {
-      showToast('Network error occurred.', 'error');
+      setMessage({ text: 'Network error occurred', type: 'error' });
     }
     setSaving(false);
   };
 
-  const handleAddAssignment = async (e: React.FormEvent) => {
+  // Delete Timetable Entry
+  const handleDeleteTimetable = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this timetable class?')) return;
+    try {
+      const res = await fetch(`/api/timetable?id=${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        setMessage({ text: 'Class deleted successfully', type: 'success' });
+        fetchTimetable(mgmtBranchId, mgmtYear, mgmtSection);
+        fetchStats();
+      }
+    } catch {}
+  };
+
+  // Save Assignment (Create or Update)
+  const handleSaveAssignment = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
+    setMessage({ text: '', type: '' });
+
+    const payload = {
+      branchId: asBranchId,
+      year: asYear,
+      section: asSection.trim() || null,
+      subject: asSubject.trim(),
+      title: asTitle.trim(),
+      description: asDescription.trim() || null,
+      dueDate: asDueDate,
+      priority: asPriority,
+      status: asStatus,
+    };
+
     try {
+      const isEdit = showModal === 'edit_as' && editingEntryId;
       const res = await fetch('/api/assignments', {
-        method: 'POST',
+        method: isEdit ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          branchId: asBranchId,
-          year: asYear,
-          subject: asSubject,
-          title: asTitle,
-          description: asDescription || null,
-          dueDate: asDueDate,
-          priority: asPriority,
-        }),
+        body: JSON.stringify(isEdit ? { id: editingEntryId, ...payload } : payload),
       });
 
-      if (res.ok) {
-        showToast('New assignment created and students notified!', 'success');
-        setShowModal(null);
-        setAsSubject('');
-        setAsTitle('');
-        setAsDescription('');
-        setAsDueDate('');
-        // Refresh stats
-        fetch('/api/admin/stats').then(r => r.json()).then(d => setStats(d.stats));
+      const data = await res.json();
+      if (!res.ok) {
+        setMessage({ text: data.error || 'Failed to save assignment', type: 'error' });
       } else {
-        const data = await res.json();
-        showToast(data.error || 'Failed to create assignment.', 'error');
+        setMessage({ text: isEdit ? 'Assignment updated successfully!' : 'Assignment published and students alerted!', type: 'success' });
+        setShowModal(null);
+        fetchAssignments(mgmtBranchId, mgmtYear);
+        fetchStats();
       }
     } catch {
-      showToast('Network error occurred.', 'error');
+      setMessage({ text: 'Network error occurred', type: 'error' });
     }
     setSaving(false);
   };
 
-  const updateUserRole = async (userId: number, role: string, branchId?: number) => {
+  // Delete Assignment
+  const handleDeleteAssignment = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this assignment?')) return;
+    try {
+      const res = await fetch(`/api/assignments?id=${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        setMessage({ text: 'Assignment deleted', type: 'success' });
+        fetchAssignments(mgmtBranchId, mgmtYear);
+        fetchStats();
+      }
+    } catch {}
+  };
+
+  // Superadmin Role Update
+  const handleRoleChange = async (userId: string, newRole: string, newBranchId?: string) => {
     try {
       const res = await fetch('/api/admin/users', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, role, branchId }),
+        body: JSON.stringify({ userId, role: newRole, branchId: newBranchId }),
       });
       if (res.ok) {
-        setUsersList(prev => prev.map(u => u.id === userId ? { ...u, role } : u));
-        showToast('User role updated successfully!', 'success');
+        setMessage({ text: 'User role updated successfully', type: 'success' });
+        fetchUsers();
+        fetchStats();
       }
-    } catch {
-      showToast('Failed to update role.', 'error');
-    }
+    } catch {}
   };
-
-  const filteredUsers = usersList.filter(u => {
-    if (!userSearch) return true;
-    const q = userSearch.toLowerCase();
-    return (
-      u.name.toLowerCase().includes(q) ||
-      u.email.toLowerCase().includes(q) ||
-      (u.branch_code && u.branch_code.toLowerCase().includes(q))
-    );
-  });
 
   if (loading) {
     return (
       <>
         <Navbar />
-        <div className="flex items-center justify-center min-h-[calc(100vh-64px)]">
-          <div className="flex flex-col items-center gap-3">
-            <div className="w-8 h-8 rounded-full border-2 border-slate-900 border-t-transparent animate-spin" />
-            <p className="text-xs text-slate-500 font-medium">Loading admin panel...</p>
-          </div>
+        <div className="flex-1 flex items-center justify-center min-h-[60vh]">
+          <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
         </div>
       </>
     );
   }
 
-  const userBranch = branches.find(b => b.id === user?.branchId);
+  const isSuperAdmin = user?.role === 'superadmin';
 
   return (
     <>
       <Navbar />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-fade-in">
+      <main className="flex-1 py-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-8 animate-fade-in">
         
-        {/* Page Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-200/80">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="badge bg-purple-50 text-purple-700 border-purple-200 text-[10px] font-semibold uppercase tracking-wider">
-                {user?.role === 'superadmin' ? 'Super Admin Portal' : 'Branch Admin Portal'}
+        {/* Admin Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/80 pb-6">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className={`badge ${isSuperAdmin ? 'badge-urgent' : 'badge-lecture'}`}>
+                {isSuperAdmin ? '👑 Super Admin Control' : '🏢 Branch Admin Panel'}
               </span>
-              <span className="text-slate-300">•</span>
-              <span className="text-xs text-slate-500 font-medium">
-                {user?.role === 'superadmin' ? 'Full System Access' : `${userBranch?.name || 'Assigned Branch'}`}
-              </span>
+              <span className="text-xs text-slate-400 font-mono">{user?.email}</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
-              Admin Management Center
+              IIIT-B Academic & Class Management
             </h1>
           </div>
 
-          {/* Quick Action Buttons */}
-          <div className="flex items-center gap-3">
+          {/* Quick Actions */}
+          <div className="flex items-center gap-2">
             <button
-              onClick={() => setShowModal('timetable')}
+              onClick={() => {
+                setEditingEntryId(null);
+                setTtSubject('');
+                setTtTeacher('');
+                setTtRoom('');
+                setShowModal('create_tt');
+              }}
               className="btn-primary text-xs py-2.5 px-4 shadow-sm flex items-center gap-1.5"
             >
-              <Plus className="w-4 h-4" />
-              <span>Add Timetable Class</span>
+              <Plus className="w-3.5 h-3.5" />
+              <span>Add Class</span>
             </button>
 
             <button
-              onClick={() => setShowModal('assignment')}
-              className="btn-secondary text-xs py-2.5 px-4 shadow-sm flex items-center gap-1.5"
+              onClick={() => {
+                setEditingEntryId(null);
+                setAsSubject('');
+                setAsTitle('');
+                setAsDescription('');
+                setAsDueDate('');
+                setShowModal('create_as');
+              }}
+              className="btn-secondary text-xs py-2.5 px-4 shadow-2xs flex items-center gap-1.5"
             >
-              <Plus className="w-4 h-4" />
-              <span>Create Assignment</span>
+              <Plus className="w-3.5 h-3.5" />
+              <span>Publish Assignment</span>
             </button>
           </div>
         </div>
 
-        {/* Toast Feedback */}
+        {/* Global Message Banner */}
         {message.text && (
-          <div className={`p-4 rounded-2xl border text-xs flex items-center gap-2.5 animate-slide-up ${
-            message.type === 'success' 
-              ? 'bg-emerald-50 border-emerald-200 text-emerald-800' 
-              : 'bg-rose-50 border-rose-200 text-rose-800'
+          <div className={`p-4 rounded-2xl text-xs flex items-center justify-between animate-fade-in ${
+            message.type === 'success' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-rose-50 text-rose-800 border border-rose-200'
           }`}>
-            {message.type === 'success' ? (
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-            ) : (
-              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-            )}
-            <span className="font-medium">{message.text}</span>
-          </div>
-        )}
-
-        {/* Metrics Grid */}
-        {stats && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            
-            <div className="card p-5 space-y-1">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-slate-500">Students</span>
-                <Users className="w-4 h-4 text-blue-600" />
-              </div>
-              <p className="text-2xl font-bold text-slate-900">{stats.totalStudents}</p>
-              <p className="text-[10px] text-slate-400">Registered</p>
+            <div className="flex items-center gap-2">
+              {message.type === 'success' ? <CheckCircle2 className="w-4 h-4 text-emerald-600" /> : <AlertCircle className="w-4 h-4 text-rose-600" />}
+              <span>{message.text}</span>
             </div>
-
-            <div className="card p-5 space-y-1">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-slate-500">Active Assignments</span>
-                <BookOpen className="w-4 h-4 text-emerald-600" />
-              </div>
-              <p className="text-2xl font-bold text-slate-900">{stats.activeAssignments}</p>
-              <p className="text-[10px] text-emerald-600 font-medium">In progress</p>
-            </div>
-
-            <div className="card p-5 space-y-1">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-slate-500">Timetable Entries</span>
-                <Calendar className="w-4 h-4 text-purple-600" />
-              </div>
-              <p className="text-2xl font-bold text-slate-900">{stats.totalEntries}</p>
-              <p className="text-[10px] text-slate-400">Class periods</p>
-            </div>
-
-            <div className="card p-5 space-y-1">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-slate-500">Total Assignments</span>
-                <BarChart3 className="w-4 h-4 text-amber-600" />
-              </div>
-              <p className="text-2xl font-bold text-slate-900">{stats.totalAssignments}</p>
-              <p className="text-[10px] text-slate-400">All-time</p>
-            </div>
-
-          </div>
-        )}
-
-        {/* Tab Toggle for Super Admin */}
-        {user?.role === 'superadmin' && (
-          <div className="flex items-center gap-1 bg-slate-200/60 p-1 rounded-2xl max-w-xs">
-            <button
-              onClick={() => setActiveTab('overview')}
-              className={`flex-1 py-2 px-3 rounded-xl text-xs font-medium transition-all ${
-                activeTab === 'overview' ? 'bg-white text-slate-900 font-semibold shadow-2xs' : 'text-slate-600'
-              }`}
-            >
-              Control Overview
+            <button onClick={() => setMessage({ text: '', type: '' })} className="p-1 hover:bg-black/5 rounded-lg">
+              <X className="w-3.5 h-3.5" />
             </button>
+          </div>
+        )}
+
+        {/* Navigation Tabs */}
+        <div className="flex items-center gap-2 border-b border-slate-200/80 pb-px">
+          <button
+            onClick={() => setActiveTab('overview')}
+            className={`tab-item ${activeTab === 'overview' ? 'tab-item-active' : 'tab-item-inactive'}`}
+          >
+            <BarChart3 className="w-3.5 h-3.5 inline mr-1.5" />
+            Overview
+          </button>
+
+          <button
+            onClick={() => setActiveTab('timetable')}
+            className={`tab-item ${activeTab === 'timetable' ? 'tab-item-active' : 'tab-item-inactive'}`}
+          >
+            <Calendar className="w-3.5 h-3.5 inline mr-1.5" />
+            Manage Timetables & Batches
+          </button>
+
+          <button
+            onClick={() => setActiveTab('assignments')}
+            className={`tab-item ${activeTab === 'assignments' ? 'tab-item-active' : 'tab-item-inactive'}`}
+          >
+            <BookOpen className="w-3.5 h-3.5 inline mr-1.5" />
+            Manage Assignments
+          </button>
+
+          {isSuperAdmin && (
             <button
               onClick={() => setActiveTab('users')}
-              className={`flex-1 py-2 px-3 rounded-xl text-xs font-medium transition-all ${
-                activeTab === 'users' ? 'bg-white text-slate-900 font-semibold shadow-2xs' : 'text-slate-600'
-              }`}
+              className={`tab-item ${activeTab === 'users' ? 'tab-item-active' : 'tab-item-inactive'}`}
             >
-              User Directory ({usersList.length})
+              <Users className="w-3.5 h-3.5 inline mr-1.5" />
+              Users & Permissions
             </button>
+          )}
+        </div>
+
+        {/* ===================== TAB: OVERVIEW ===================== */}
+        {activeTab === 'overview' && stats && (
+          <div className="space-y-8 animate-fade-in">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="card p-5 space-y-1">
+                <p className="text-xs text-slate-500 font-medium">Enrolled Students</p>
+                <p className="text-2xl sm:text-3xl font-extrabold text-slate-900">{stats.totalStudents}</p>
+              </div>
+
+              <div className="card p-5 space-y-1">
+                <p className="text-xs text-slate-500 font-medium">Scheduled Classes</p>
+                <p className="text-2xl sm:text-3xl font-extrabold text-slate-900">{stats.totalEntries}</p>
+              </div>
+
+              <div className="card p-5 space-y-1">
+                <p className="text-xs text-slate-500 font-medium">Total Assignments</p>
+                <p className="text-2xl sm:text-3xl font-extrabold text-slate-900">{stats.totalAssignments}</p>
+              </div>
+
+              <div className="card p-5 space-y-1 border-blue-200/80 bg-blue-50/20">
+                <p className="text-xs text-blue-700 font-medium">Active Deadlines</p>
+                <p className="text-2xl sm:text-3xl font-extrabold text-blue-900">{stats.activeAssignments}</p>
+              </div>
+            </div>
+
+            {/* Quick Links Card */}
+            <div className="card p-6 bg-slate-900 text-white space-y-4">
+              <h3 className="text-base font-semibold">Quick Administration Controls</h3>
+              <p className="text-xs text-slate-300">
+                Choose a branch and batch below to edit lecture timings, swap classrooms, add tutorials, or modify due dates.
+              </p>
+              <div className="flex flex-wrap gap-2 pt-2">
+                <button
+                  onClick={() => setActiveTab('timetable')}
+                  className="btn-accent text-xs py-2 px-4 shadow-sm"
+                >
+                  Edit Class Timetables →
+                </button>
+                <button
+                  onClick={() => setActiveTab('assignments')}
+                  className="btn-secondary text-xs py-2 px-4 bg-slate-800 text-white border-slate-700 hover:bg-slate-700"
+                >
+                  Edit Assignments →
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
-        {/* Superadmin User Management Table */}
-        {activeTab === 'users' && user?.role === 'superadmin' && (
-          <div className="card p-6 space-y-4 animate-fade-in">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h2 className="text-base font-bold text-slate-900">User Role Management</h2>
-                <p className="text-xs text-slate-500">Promote students to branch admins or super administrators</p>
+        {/* ===================== TAB: MANAGE TIMETABLES ===================== */}
+        {activeTab === 'timetable' && (
+          <div className="space-y-6 animate-fade-in">
+            
+            {/* Filter Header */}
+            <div className="card p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  Target Batch:
+                </span>
+
+                <select
+                  value={mgmtBranchId}
+                  onChange={e => handleBranchChange(e.target.value)}
+                  className="select-field text-xs py-2 min-w-[200px]"
+                >
+                  {branches.map(b => (
+                    <option key={b.id || b._id} value={b.id || b._id}>
+                      {b.code} — {b.name}
+                    </option>
+                  ))}
+                </select>
+
+                <select
+                  value={mgmtYear}
+                  onChange={e => handleYearChange(parseInt(e.target.value))}
+                  className="select-field text-xs py-2 w-32"
+                >
+                  {[1, 2, 3, 4, 5].map(y => (
+                    <option key={y} value={y}>Year {y} / Batch {y}</option>
+                  ))}
+                </select>
+
+                {/* Section Input / Selector */}
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-slate-500 font-medium">Sec:</span>
+                  <input
+                    type="text"
+                    value={mgmtSection}
+                    onChange={e => handleSectionChange(e.target.value.toUpperCase())}
+                    placeholder="A"
+                    className="input-field text-xs py-1.5 px-2.5 w-20 text-center font-bold"
+                  />
+                </div>
               </div>
-              <div className="relative w-full sm:w-64">
-                <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+
+              <button
+                onClick={() => {
+                  setEditingEntryId(null);
+                  setTtBranchId(mgmtBranchId);
+                  setTtYear(mgmtYear);
+                  setTtSection(mgmtSection);
+                  setTtSubject('');
+                  setTtTeacher('');
+                  setTtRoom('');
+                  setShowModal('create_tt');
+                }}
+                className="btn-primary text-xs py-2 px-3.5 shadow-sm flex items-center gap-1.5"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add Class to This Batch</span>
+              </button>
+            </div>
+
+            {/* Timetable Entries List */}
+            {loadingItems ? (
+              <div className="grid gap-3">
+                {[1, 2, 3].map(i => <div key={i} className="card p-5 animate-pulse bg-slate-100/70 h-20 rounded-2xl" />)}
+              </div>
+            ) : timetableEntries.length === 0 ? (
+              <div className="card py-16 px-6 text-center border-dashed border-slate-300">
+                <Calendar className="w-8 h-8 text-slate-400 mx-auto mb-2 opacity-50" />
+                <h3 className="text-base font-semibold text-slate-800">No classes in this batch yet</h3>
+                <p className="text-xs text-slate-500 mt-1">Click "+ Add Class" above to create timetable entries for this year and section.</p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {DAYS.map((dayName, dayIdx) => {
+                  const dayClasses = timetableEntries.filter(e => e.dayOfWeek === dayIdx);
+                  if (dayClasses.length === 0) return null;
+
+                  return (
+                    <div key={dayName} className="space-y-3">
+                      <div className="flex items-center gap-2 pb-1 border-b border-slate-200">
+                        <span className="w-2 h-2 rounded-full bg-blue-600" />
+                        <h3 className="font-bold text-sm text-slate-900">{dayName}</h3>
+                        <span className="text-xs text-slate-400 font-mono">({dayClasses.length} sessions)</span>
+                      </div>
+
+                      <div className="grid gap-2.5">
+                        {dayClasses.map(entry => (
+                          <div
+                            key={entry.id || entry._id}
+                            className="card p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 card-hover border-slate-200"
+                          >
+                            <div className="space-y-1 flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className={`badge ${
+                                  entry.type === 'lab' ? 'badge-lab' :
+                                  entry.type === 'tutorial' ? 'badge-tutorial' :
+                                  entry.type === 'break' ? 'badge-break' : 'badge-lecture'
+                                }`}>
+                                  {entry.type}
+                                </span>
+                                <span className="font-semibold text-sm text-slate-900">{entry.subject}</span>
+                                <span className="text-xs text-slate-400 font-mono">Sec {entry.section}</span>
+                              </div>
+
+                              <div className="flex flex-wrap items-center gap-4 text-xs text-slate-500 pt-1">
+                                <span className="flex items-center gap-1 font-mono font-medium text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md">
+                                  <Clock className="w-3 h-3 text-slate-400" />
+                                  {entry.startTime} — {entry.endTime}
+                                </span>
+                                {entry.teacher && (
+                                  <span className="flex items-center gap-1">
+                                    <UserIcon className="w-3 h-3 text-slate-400" />
+                                    {entry.teacher}
+                                  </span>
+                                )}
+                                {entry.room && (
+                                  <span className="flex items-center gap-1">
+                                    <MapPin className="w-3 h-3 text-slate-400" />
+                                    {entry.room}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Actions */}
+                            <div className="flex items-center gap-2 shrink-0 border-t sm:border-t-0 pt-2 sm:pt-0">
+                              <button
+                                onClick={() => openEditTimetable(entry)}
+                                className="text-xs font-medium text-blue-700 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1"
+                              >
+                                <Edit3 className="w-3 h-3" />
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => handleDeleteTimetable(entry.id || entry._id || '')}
+                                className="text-xs font-medium text-rose-600 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                                Delete
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ===================== TAB: MANAGE ASSIGNMENTS ===================== */}
+        {activeTab === 'assignments' && (
+          <div className="space-y-6 animate-fade-in">
+            
+            {/* Filter Header */}
+            <div className="card p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  Target Batch:
+                </span>
+
+                <select
+                  value={mgmtBranchId}
+                  onChange={e => handleBranchChange(e.target.value)}
+                  className="select-field text-xs py-2 min-w-[200px]"
+                >
+                  {branches.map(b => (
+                    <option key={b.id || b._id} value={b.id || b._id}>
+                      {b.code} — {b.name}
+                    </option>
+                  ))}
+                </select>
+
+                <select
+                  value={mgmtYear}
+                  onChange={e => handleYearChange(parseInt(e.target.value))}
+                  className="select-field text-xs py-2 w-32"
+                >
+                  {[1, 2, 3, 4, 5].map(y => (
+                    <option key={y} value={y}>Year {y} / Batch {y}</option>
+                  ))}
+                </select>
+              </div>
+
+              <button
+                onClick={() => {
+                  setEditingEntryId(null);
+                  setAsBranchId(mgmtBranchId);
+                  setAsYear(mgmtYear);
+                  setAsSection(mgmtSection);
+                  setAsSubject('');
+                  setAsTitle('');
+                  setAsDescription('');
+                  setAsDueDate('');
+                  setShowModal('create_as');
+                }}
+                className="btn-primary text-xs py-2 px-3.5 shadow-sm flex items-center gap-1.5"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Publish New Assignment</span>
+              </button>
+            </div>
+
+            {/* Assignments List */}
+            {loadingItems ? (
+              <div className="grid gap-3">
+                {[1, 2, 3].map(i => <div key={i} className="card p-5 animate-pulse bg-slate-100/70 h-20 rounded-2xl" />)}
+              </div>
+            ) : assignmentsList.length === 0 ? (
+              <div className="card py-16 px-6 text-center border-dashed border-slate-300">
+                <BookOpen className="w-8 h-8 text-slate-400 mx-auto mb-2 opacity-50" />
+                <h3 className="text-base font-semibold text-slate-800">No assignments posted for this batch</h3>
+                <p className="text-xs text-slate-500 mt-1">Publish an assignment above to automatically notify students and sync to their dashboards.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {assignmentsList.map(as => (
+                  <div
+                    key={as.id || as._id}
+                    className="card p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 card-hover border-slate-200"
+                  >
+                    <div className="space-y-1.5 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className={`badge ${
+                          as.priority === 'urgent' ? 'badge-urgent' :
+                          as.priority === 'high' ? 'badge-high' : 'badge-medium'
+                        }`}>
+                          {as.priority}
+                        </span>
+                        <span className="text-xs font-semibold text-slate-500 uppercase">{as.subject}</span>
+                        {as.section && <span className="badge bg-slate-100 text-slate-600 text-[10px]">Sec {as.section}</span>}
+                      </div>
+
+                      <h4 className="font-bold text-base text-slate-900">{as.title}</h4>
+                      {as.description && <p className="text-xs text-slate-600 line-clamp-2">{as.description}</p>}
+
+                      <div className="flex items-center gap-3 text-xs text-slate-500 pt-1 font-mono">
+                        <span className="font-semibold text-slate-700">Due: {as.dueDate}</span>
+                        <span>• Status: {as.status}</span>
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-2 shrink-0 border-t sm:border-t-0 pt-2 sm:pt-0">
+                      <button
+                        onClick={() => openEditAssignment(as)}
+                        className="text-xs font-medium text-blue-700 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1"
+                      >
+                        <Edit3 className="w-3 h-3" />
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDeleteAssignment(as.id || as._id || '')}
+                        className="text-xs font-medium text-rose-600 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ===================== TAB: USERS & ROLES (SUPERADMIN) ===================== */}
+        {activeTab === 'users' && isSuperAdmin && (
+          <div className="space-y-6 animate-fade-in">
+            <div className="card p-4 sm:p-5 flex items-center justify-between gap-4">
+              <div className="relative w-full sm:w-72">
+                <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
                   type="text"
                   value={userSearch}
                   onChange={e => setUserSearch(e.target.value)}
-                  placeholder="Search users..."
-                  className="input-field text-xs pl-8 py-2"
+                  placeholder="Search students by name or email..."
+                  className="input-field text-xs pl-10 py-2"
                 />
               </div>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="border-b border-slate-200 text-slate-500 uppercase tracking-wider text-[10px]">
-                    <th className="text-left py-3 px-3">Name</th>
-                    <th className="text-left py-3 px-3">Email</th>
-                    <th className="text-left py-3 px-3">Branch</th>
-                    <th className="text-left py-3 px-3">Year</th>
-                    <th className="text-left py-3 px-3">Current Role</th>
-                    <th className="text-left py-3 px-3">Change Role</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {filteredUsers.map(u => (
-                    <tr key={u.id} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="py-3 px-3 font-semibold text-slate-900">{u.name}</td>
-                      <td className="py-3 px-3 text-slate-500 font-mono">{u.email}</td>
-                      <td className="py-3 px-3">
-                        <span className="badge badge-low text-[10px]">{u.branch_code || '—'}</span>
-                      </td>
-                      <td className="py-3 px-3 text-slate-600">{u.year ? `Year ${u.year}` : '—'}</td>
-                      <td className="py-3 px-3">
-                        <span className={`badge text-[10px] ${
-                          u.role === 'superadmin' ? 'bg-purple-100 text-purple-700 border-purple-200' :
-                          u.role === 'admin' ? 'bg-blue-100 text-blue-700 border-blue-200' :
-                          'bg-slate-100 text-slate-700 border-slate-200'
-                        }`}>
-                          {u.role}
-                        </span>
-                      </td>
-                      <td className="py-3 px-3">
-                        {u.role !== 'superadmin' && (
-                          <select
-                            value={u.role}
-                            onChange={e => updateUserRole(u.id, e.target.value)}
-                            className="select-field text-xs py-1 px-2.5 w-32"
-                          >
-                            <option value="student">Student</option>
-                            <option value="admin">Branch Admin</option>
-                            <option value="superadmin">Super Admin</option>
-                          </select>
-                        )}
-                      </td>
+            <div className="card overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider">
+                    <tr>
+                      <th className="p-4">User</th>
+                      <th className="p-4">Email</th>
+                      <th className="p-4">Role</th>
+                      <th className="p-4">Batch / Section</th>
+                      <th className="p-4 text-right">Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {/* Overview Tab Content */}
-        {activeTab === 'overview' && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            
-            <div className="card p-6 space-y-4 md:col-span-2">
-              <h2 className="text-base font-bold text-slate-900">Branch Management Guidelines</h2>
-              <div className="space-y-3 text-xs text-slate-600 leading-relaxed">
-                <div className="p-4 rounded-2xl bg-blue-50/60 border border-blue-100 flex items-start gap-3">
-                  <Sparkles className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
-                  <div>
-                    <strong className="text-blue-950 block mb-0.5">Automated Student Alerts</strong>
-                    Whenever you add or modify a class schedule or create a new assignment, students in that branch and year will receive an instant notification in their alert feed.
-                  </div>
-                </div>
-
-                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-start gap-3">
-                  <ShieldCheck className="w-4 h-4 text-slate-600 shrink-0 mt-0.5" />
-                  <div>
-                    <strong className="text-slate-900 block mb-0.5">Role Boundaries</strong>
-                    Branch admins can publish and manage data specifically for their designated department. Super admins have full unrestricted access across all college departments.
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Quick Actions Card */}
-            <div className="card p-6 space-y-4">
-              <h3 className="text-sm font-bold text-slate-900">Quick Tools</h3>
-              <div className="space-y-2">
-                <button
-                  onClick={() => setShowModal('timetable')}
-                  className="w-full btn-secondary text-xs py-2.5 px-3 flex items-center justify-between"
-                >
-                  <span className="flex items-center gap-2">
-                    <Calendar className="w-3.5 h-3.5 text-blue-600" />
-                    Add Timetable Class
-                  </span>
-                  <Plus className="w-3.5 h-3.5 text-slate-400" />
-                </button>
-
-                <button
-                  onClick={() => setShowModal('assignment')}
-                  className="w-full btn-secondary text-xs py-2.5 px-3 flex items-center justify-between"
-                >
-                  <span className="flex items-center gap-2">
-                    <BookOpen className="w-3.5 h-3.5 text-emerald-600" />
-                    Create Assignment
-                  </span>
-                  <Plus className="w-3.5 h-3.5 text-slate-400" />
-                </button>
-              </div>
-            </div>
-
-          </div>
-        )}
-
-        {/* Modal: Add Timetable Entry */}
-        {showModal === 'timetable' && (
-          <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto animate-fade-in">
-            <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-lg w-full p-6 space-y-5 animate-slide-up">
-              
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-blue-600" />
-                  Add Class Entry
-                </h2>
-                <button onClick={() => setShowModal(null)} className="text-slate-400 hover:text-slate-700 p-1.5 rounded-xl">
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              <form onSubmit={handleAddTimetable} className="space-y-3.5">
-                
-                {user?.role === 'superadmin' && (
-                  <div>
-                    <label className="block text-xs font-medium text-slate-700 mb-1">Branch</label>
-                    <select
-                      value={ttBranchId}
-                      onChange={e => setTtBranchId(parseInt(e.target.value))}
-                      className="select-field text-xs"
-                    >
-                      {branches.map(b => (
-                        <option key={b.id} value={b.id}>{b.code} — {b.name}</option>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {usersList
+                      .filter(u => !userSearch || u.name?.toLowerCase().includes(userSearch.toLowerCase()) || u.email?.toLowerCase().includes(userSearch.toLowerCase()))
+                      .map(u => (
+                        <tr key={u.id || u._id} className="hover:bg-slate-50/50">
+                          <td className="p-4 font-semibold text-slate-900">{u.name}</td>
+                          <td className="p-4 text-slate-500 font-mono">{u.email}</td>
+                          <td className="p-4">
+                            <span className={`badge ${
+                              u.role === 'superadmin' ? 'badge-urgent' :
+                              u.role === 'admin' ? 'badge-high' : 'badge-low'
+                            }`}>
+                              {u.role}
+                            </span>
+                          </td>
+                          <td className="p-4 text-slate-600">
+                            {u.branch_code || 'All'} • Year {u.year || '-'} Sec {u.section || '-'}
+                          </td>
+                          <td className="p-4 text-right">
+                            {u.role === 'student' ? (
+                              <button
+                                onClick={() => handleRoleChange(u.id || u._id, 'admin', mgmtBranchId)}
+                                className="text-xs font-semibold text-indigo-600 hover:text-indigo-900 bg-indigo-50 px-2.5 py-1 rounded-lg"
+                              >
+                                Promote to Branch Admin
+                              </button>
+                            ) : u.role === 'admin' ? (
+                              <button
+                                onClick={() => handleRoleChange(u.id || u._id, 'student')}
+                                className="text-xs font-semibold text-slate-500 hover:text-slate-700 bg-slate-100 px-2.5 py-1 rounded-lg"
+                              >
+                                Demote to Student
+                              </button>
+                            ) : (
+                              <span className="text-[11px] text-slate-400 font-medium">Super Admin</span>
+                            )}
+                          </td>
+                        </tr>
                       ))}
-                    </select>
-                  </div>
-                )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-medium text-slate-700 mb-1">Year</label>
-                    <select value={ttYear} onChange={e => setTtYear(parseInt(e.target.value))} className="select-field text-xs">
-                      {[1, 2, 3, 4].map(y => <option key={y} value={y}>Year {y}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-slate-700 mb-1">Section</label>
-                    <select value={ttSection} onChange={e => setTtSection(e.target.value)} className="select-field text-xs">
-                      {['A', 'B', 'C', 'D'].map(s => <option key={s} value={s}>Section {s}</option>)}
-                    </select>
-                  </div>
-                </div>
+      </main>
 
+      {/* ===================== MODAL: CREATE / EDIT TIMETABLE ===================== */}
+      {(showModal === 'create_tt' || showModal === 'edit_tt') && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="card max-w-lg w-full p-6 space-y-5 shadow-2xl bg-white animate-scale-up">
+            
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="font-bold text-base text-slate-900">
+                {showModal === 'edit_tt' ? '✏️ Edit Timetable Class' : '➕ Add Class to Schedule'}
+              </h3>
+              <button onClick={() => setShowModal(null)} className="p-1 hover:bg-slate-100 rounded-lg text-slate-400">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveTimetable} className="space-y-4 text-xs">
+              
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-slate-700 mb-1">Day of Week</label>
-                  <select value={ttDay} onChange={e => setTtDay(parseInt(e.target.value))} className="select-field text-xs">
-                    {DAYS.map((d, i) => <option key={i} value={i}>{d}</option>)}
+                  <label className="block font-medium text-slate-700 mb-1">Branch</label>
+                  <select
+                    value={ttBranchId}
+                    onChange={e => setTtBranchId(e.target.value)}
+                    className="select-field text-xs"
+                    required
+                  >
+                    {branches.map(b => (
+                      <option key={b.id || b._id} value={b.id || b._id}>{b.code} — {b.name}</option>
+                    ))}
                   </select>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="block text-xs font-medium text-slate-700 mb-1">Start Time</label>
+                    <label className="block font-medium text-slate-700 mb-1">Year</label>
+                    <select
+                      value={ttYear}
+                      onChange={e => setTtYear(parseInt(e.target.value))}
+                      className="select-field text-xs"
+                    >
+                      {[1, 2, 3, 4, 5].map(y => <option key={y} value={y}>Year {y}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block font-medium text-slate-700 mb-1">Section</label>
                     <input
-                      type="time"
-                      value={ttStartTime}
-                      onChange={e => setTtStartTime(e.target.value)}
-                      className="input-field text-xs"
+                      type="text"
+                      value={ttSection}
+                      onChange={e => setTtSection(e.target.value.toUpperCase())}
+                      placeholder="A"
+                      className="input-field text-xs font-bold text-center"
                       required
                     />
                   </div>
-                  <div>
-                    <label className="block text-xs font-medium text-slate-700 mb-1">End Time</label>
-                    <input
-                      type="time"
-                      value={ttEndTime}
-                      onChange={e => setTtEndTime(e.target.value)}
-                      className="input-field text-xs"
-                      required
-                    />
-                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-medium text-slate-700 mb-1">Day of Week</label>
+                  <select
+                    value={ttDay}
+                    onChange={e => setTtDay(parseInt(e.target.value))}
+                    className="select-field text-xs"
+                  >
+                    {DAYS.map((d, i) => <option key={d} value={i}>{d}</option>)}
+                  </select>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-slate-700 mb-1">Subject Name *</label>
-                  <input
-                    type="text"
-                    value={ttSubject}
-                    onChange={e => setTtSubject(e.target.value)}
-                    placeholder="e.g. Data Structures & Algorithms"
-                    className="input-field text-xs"
-                    required
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-medium text-slate-700 mb-1">Professor / Teacher</label>
-                    <input
-                      type="text"
-                      value={ttTeacher}
-                      onChange={e => setTtTeacher(e.target.value)}
-                      placeholder="e.g. Dr. Sharma"
-                      className="input-field text-xs"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-slate-700 mb-1">Room / Lab</label>
-                    <input
-                      type="text"
-                      value={ttRoom}
-                      onChange={e => setTtRoom(e.target.value)}
-                      placeholder="e.g. Room 301 / Lab 2"
-                      className="input-field text-xs"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-slate-700 mb-1">Type</label>
-                  <select value={ttType} onChange={e => setTtType(e.target.value)} className="select-field text-xs">
+                  <label className="block font-medium text-slate-700 mb-1">Class Type</label>
+                  <select
+                    value={ttType}
+                    onChange={e => setTtType(e.target.value)}
+                    className="select-field text-xs"
+                  >
                     <option value="lecture">Lecture</option>
                     <option value="lab">Lab Session</option>
                     <option value="tutorial">Tutorial</option>
-                    <option value="break">Break</option>
+                    <option value="break">Break / Recess</option>
                   </select>
                 </div>
+              </div>
 
-                <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
-                  <button type="button" onClick={() => setShowModal(null)} className="btn-secondary text-xs py-2 px-4">
-                    Cancel
-                  </button>
-                  <button type="submit" disabled={saving} className="btn-primary text-xs py-2 px-5">
-                    {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Save Entry'}
-                  </button>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-medium text-slate-700 mb-1">Start Time (HH:MM)</label>
+                  <input
+                    type="time"
+                    value={ttStartTime}
+                    onChange={e => setTtStartTime(e.target.value)}
+                    className="input-field text-xs font-mono"
+                    required
+                  />
                 </div>
+                <div>
+                  <label className="block font-medium text-slate-700 mb-1">End Time (HH:MM)</label>
+                  <input
+                    type="time"
+                    value={ttEndTime}
+                    onChange={e => setTtEndTime(e.target.value)}
+                    className="input-field text-xs font-mono"
+                    required
+                  />
+                </div>
+              </div>
 
-              </form>
-            </div>
-          </div>
-        )}
+              <div>
+                <label className="block font-medium text-slate-700 mb-1">Subject / Course Name</label>
+                <input
+                  type="text"
+                  value={ttSubject}
+                  onChange={e => setTtSubject(e.target.value)}
+                  placeholder="e.g. Data Structures & Algorithms"
+                  className="input-field text-xs"
+                  required
+                />
+              </div>
 
-        {/* Modal: Create Assignment */}
-        {showModal === 'assignment' && (
-          <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto animate-fade-in">
-            <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-lg w-full p-6 space-y-5 animate-slide-up">
-              
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                  <BookOpen className="w-4 h-4 text-emerald-600" />
-                  Create Assignment
-                </h2>
-                <button onClick={() => setShowModal(null)} className="text-slate-400 hover:text-slate-700 p-1.5 rounded-xl">
-                  <X className="w-4 h-4" />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-medium text-slate-700 mb-1">Instructor / Professor</label>
+                  <input
+                    type="text"
+                    value={ttTeacher}
+                    onChange={e => setTtTeacher(e.target.value)}
+                    placeholder="e.g. Dr. Sharma"
+                    className="input-field text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block font-medium text-slate-700 mb-1">Room / Lab Number</label>
+                  <input
+                    type="text"
+                    value={ttRoom}
+                    onChange={e => setTtRoom(e.target.value)}
+                    placeholder="e.g. Room 301 / Lab 2"
+                    className="input-field text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setShowModal(null)}
+                  className="btn-secondary text-xs py-2 px-3.5"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="btn-primary text-xs py-2 px-4 shadow-sm flex items-center gap-1.5"
+                >
+                  {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  <span>{showModal === 'edit_tt' ? 'Save Changes' : 'Add to Timetable'}</span>
                 </button>
               </div>
 
-              <form onSubmit={handleAddAssignment} className="space-y-3.5">
-                
-                {user?.role === 'superadmin' && (
-                  <div>
-                    <label className="block text-xs font-medium text-slate-700 mb-1">Branch</label>
-                    <select
-                      value={asBranchId}
-                      onChange={e => setAsBranchId(parseInt(e.target.value))}
-                      className="select-field text-xs"
-                    >
-                      {branches.map(b => (
-                        <option key={b.id} value={b.id}>{b.code} — {b.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                )}
+            </form>
+          </div>
+        </div>
+      )}
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-medium text-slate-700 mb-1">Year</label>
-                    <select value={asYear} onChange={e => setAsYear(parseInt(e.target.value))} className="select-field text-xs">
-                      {[1, 2, 3, 4].map(y => <option key={y} value={y}>Year {y}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-slate-700 mb-1">Priority</label>
-                    <select value={asPriority} onChange={e => setAsPriority(e.target.value)} className="select-field text-xs">
-                      <option value="low">Low</option>
-                      <option value="medium">Medium</option>
-                      <option value="high">High</option>
-                      <option value="urgent">Urgent</option>
-                    </select>
-                  </div>
+      {/* ===================== MODAL: CREATE / EDIT ASSIGNMENT ===================== */}
+      {(showModal === 'create_as' || showModal === 'edit_as') && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="card max-w-lg w-full p-6 space-y-5 shadow-2xl bg-white animate-scale-up">
+            
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="font-bold text-base text-slate-900">
+                {showModal === 'edit_as' ? '✏️ Edit Assignment' : '📝 Publish Assignment'}
+              </h3>
+              <button onClick={() => setShowModal(null)} className="p-1 hover:bg-slate-100 rounded-lg text-slate-400">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveAssignment} className="space-y-4 text-xs">
+              
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-medium text-slate-700 mb-1">Branch</label>
+                  <select
+                    value={asBranchId}
+                    onChange={e => setAsBranchId(e.target.value)}
+                    className="select-field text-xs"
+                    required
+                  >
+                    {branches.map(b => (
+                      <option key={b.id || b._id} value={b.id || b._id}>{b.code} — {b.name}</option>
+                    ))}
+                  </select>
                 </div>
 
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block font-medium text-slate-700 mb-1">Year</label>
+                    <select
+                      value={asYear}
+                      onChange={e => setAsYear(parseInt(e.target.value))}
+                      className="select-field text-xs"
+                    >
+                      {[1, 2, 3, 4, 5].map(y => <option key={y} value={y}>Year {y}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block font-medium text-slate-700 mb-1">Section</label>
+                    <input
+                      type="text"
+                      value={asSection}
+                      onChange={e => setAsSection(e.target.value.toUpperCase())}
+                      placeholder="All / A"
+                      className="input-field text-xs font-bold text-center"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-slate-700 mb-1">Subject Name *</label>
+                  <label className="block font-medium text-slate-700 mb-1">Subject</label>
                   <input
                     type="text"
                     value={asSubject}
                     onChange={e => setAsSubject(e.target.value)}
-                    placeholder="e.g. Data Structures"
+                    placeholder="e.g. Operating Systems"
                     className="input-field text-xs"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-slate-700 mb-1">Assignment Title *</label>
-                  <input
-                    type="text"
-                    value={asTitle}
-                    onChange={e => setAsTitle(e.target.value)}
-                    placeholder="e.g. Implement Binary Search Tree"
-                    className="input-field text-xs"
-                    required
-                  />
+                  <label className="block font-medium text-slate-700 mb-1">Priority</label>
+                  <select
+                    value={asPriority}
+                    onChange={e => setAsPriority(e.target.value)}
+                    className="select-field text-xs"
+                  >
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                    <option value="urgent">Urgent</option>
+                  </select>
                 </div>
+              </div>
 
-                <div>
-                  <label className="block text-xs font-medium text-slate-700 mb-1">Description / Instructions</label>
-                  <textarea
-                    value={asDescription}
-                    onChange={e => setAsDescription(e.target.value)}
-                    rows={3}
-                    placeholder="Provide details or submission requirements..."
-                    className="input-field text-xs"
-                  />
-                </div>
+              <div>
+                <label className="block font-medium text-slate-700 mb-1">Assignment Title</label>
+                <input
+                  type="text"
+                  value={asTitle}
+                  onChange={e => setAsTitle(e.target.value)}
+                  placeholder="e.g. Implement Multi-threaded Web Server"
+                  className="input-field text-xs"
+                  required
+                />
+              </div>
 
+              <div>
+                <label className="block font-medium text-slate-700 mb-1">Description & Instructions</label>
+                <textarea
+                  value={asDescription}
+                  onChange={e => setAsDescription(e.target.value)}
+                  placeholder="Details, submission guidelines, format requirements..."
+                  rows={3}
+                  className="textarea-field text-xs"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-slate-700 mb-1">Due Date *</label>
+                  <label className="block font-medium text-slate-700 mb-1">Due Date</label>
                   <input
                     type="date"
                     value={asDueDate}
@@ -723,21 +1180,43 @@ export default function AdminPage() {
                   />
                 </div>
 
-                <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
-                  <button type="button" onClick={() => setShowModal(null)} className="btn-secondary text-xs py-2 px-4">
-                    Cancel
-                  </button>
-                  <button type="submit" disabled={saving} className="btn-primary text-xs py-2 px-5">
-                    {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Publish Assignment'}
-                  </button>
+                <div>
+                  <label className="block font-medium text-slate-700 mb-1">Status</label>
+                  <select
+                    value={asStatus}
+                    onChange={e => setAsStatus(e.target.value)}
+                    className="select-field text-xs"
+                  >
+                    <option value="active">Active</option>
+                    <option value="completed">Completed</option>
+                    <option value="cancelled">Cancelled</option>
+                  </select>
                 </div>
+              </div>
 
-              </form>
-            </div>
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setShowModal(null)}
+                  className="btn-secondary text-xs py-2 px-3.5"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="btn-primary text-xs py-2 px-4 shadow-sm flex items-center gap-1.5"
+                >
+                  {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  <span>{showModal === 'edit_as' ? 'Save Changes' : 'Publish Assignment'}</span>
+                </button>
+              </div>
+
+            </form>
           </div>
-        )}
+        </div>
+      )}
 
-      </main>
     </>
   );
 }
