@@ -1,0 +1,125 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 20% 98%;
+    --foreground: 224 71% 4%;
+    --card: 0 0% 100%;
+    --card-foreground: 224 71% 4%;
+    --border: 220 13% 91%;
+    --radius: 0.75rem;
+  }
+
+  * {
+    @apply border-slate-200;
+  }
+
+  body {
+    @apply bg-slate-50/80 text-slate-900 antialiased selection:bg-blue-500/15 selection:text-blue-700 min-h-screen flex flex-col font-sans;
+  }
+}
+
+@layer components {
+  /* Minimalist Card Design */
+  .card {
+    @apply bg-white rounded-2xl border border-slate-200/80 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05),0_1px_4px_-1px_rgba(0,0,0,0.03)] transition-all duration-200;
+  }
+  
+  .card-hover {
+    @apply hover:border-slate-300 hover:shadow-[0_8px_24px_-6px_rgba(0,0,0,0.08),0_4px_8px_-2px_rgba(0,0,0,0.04)] hover:-translate-y-0.5;
+  }
+
+  .card-interactive {
+    @apply card card-hover cursor-pointer;
+  }
+
+  /* Form Elements */
+  .input-field {
+    @apply w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-900 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all duration-150 disabled:bg-slate-50 disabled:text-slate-400;
+  }
+
+  .select-field {
+    @apply input-field appearance-none bg-no-repeat bg-[right_0.8rem_center] pr-9;
+  }
+
+  /* Buttons */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-900 text-white hover:bg-slate-800 active:bg-slate-950 font-medium text-sm rounded-xl shadow-sm hover:shadow transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-accent {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800 font-medium text-sm rounded-xl shadow-sm hover:shadow transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:border-slate-300 active:bg-slate-100 font-medium text-sm rounded-xl transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-danger {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-rose-600 text-white hover:bg-rose-700 active:bg-rose-800 font-medium text-sm rounded-xl transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 px-3 py-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100/80 rounded-xl transition-all duration-150 text-sm font-medium;
+  }
+
+  .btn-notion {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-900 text-white hover:bg-black font-medium text-sm rounded-xl shadow-sm transition-all duration-150;
+  }
+
+  /* Status Badges */
+  .badge {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors;
+  }
+
+  .badge-low {
+    @apply bg-slate-100 text-slate-700 border border-slate-200/60;
+  }
+  .badge-medium {
+    @apply bg-blue-50 text-blue-700 border border-blue-200/60;
+  }
+  .badge-high {
+    @apply bg-amber-50 text-amber-700 border border-amber-200/60;
+  }
+  .badge-urgent {
+    @apply bg-rose-50 text-rose-700 border border-rose-200/60;
+  }
+  .badge-success {
+    @apply bg-emerald-50 text-emerald-700 border border-emerald-200/60;
+  }
+  .badge-lecture {
+    @apply bg-blue-50/80 text-blue-700 border border-blue-200/70;
+  }
+  .badge-lab {
+    @apply bg-emerald-50/80 text-emerald-700 border border-emerald-200/70;
+  }
+  .badge-tutorial {
+    @apply bg-purple-50/80 text-purple-700 border border-purple-200/70;
+  }
+  .badge-break {
+    @apply bg-slate-100 text-slate-600 border border-slate-200/60;
+  }
+
+  /* Glassmorphism */
+  .glass-panel {
+    @apply bg-white/80 backdrop-blur-md border border-white/40 shadow-sm;
+  }
+}
+
+/* Custom Minimalist Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
