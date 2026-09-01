@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { 
   Calendar, 
@@ -11,10 +10,7 @@ import {
   LogOut, 
   Menu, 
   X, 
-  User as UserIcon,
-  Sparkles,
-  LayoutDashboard,
-  Layers
+  LayoutDashboard
 } from 'lucide-react';
 import NotionSyncModal from './NotionSyncModal';
 import NotionWidget from './NotionWidget';
@@ -34,9 +30,13 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [notifCount, setNotifCount] = useState(0);
   const [showNotionModal, setShowNotionModal] = useState(false);
-  const [loading, setLoading] = useState(true);
   const pathname = usePathname();
   const router = useRouter();
+
+  const navigateTo = (path: string) => {
+    setMenuOpen(false);
+    router.push(path);
+  };
 
   useEffect(() => {
     fetch('/api/auth/me')
@@ -44,7 +44,6 @@ export default function Navbar() {
       .then(data => {
         if (data.user) {
           setUser(data.user);
-          // Fetch unread notifications
           fetch('/api/notifications')
             .then(res => res.json())
             .then(nData => {
@@ -52,10 +51,11 @@ export default function Navbar() {
               setNotifCount(unread);
             })
             .catch(() => {});
+        } else {
+          setUser(null);
         }
-        setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch(() => {});
   }, [pathname]);
 
   const handleLogout = async () => {
@@ -63,7 +63,7 @@ export default function Navbar() {
       await fetch('/api/auth/logout', { method: 'POST' });
     } catch {}
     setUser(null);
-    router.push('/');
+    navigateTo('/');
     router.refresh();
   };
 
@@ -71,13 +71,17 @@ export default function Navbar() {
 
   return (
     <>
-      <header className="sticky top-0 z-50 w-full bg-white/90 backdrop-blur-md border-b border-slate-200/80 transition-all shadow-xs">
+      <header className="sticky top-0 z-50 w-full bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             
             {/* Brand Logo */}
             <div className="flex items-center gap-8">
-              <Link href="/" className="flex items-center gap-2.5 group cursor-pointer">
+              <a 
+                href="/" 
+                onClick={(e) => { e.preventDefault(); navigateTo('/'); }}
+                className="flex items-center gap-2.5 group cursor-pointer"
+              >
                 <div className="w-9 h-9 rounded-xl bg-slate-900 text-white flex items-center justify-center font-bold text-sm shadow-xs group-hover:scale-105 transition-transform">
                   <span className="bg-gradient-to-tr from-blue-400 to-indigo-200 bg-clip-text text-transparent font-extrabold text-base">
                     T
@@ -91,60 +95,64 @@ export default function Navbar() {
                     IIIT-B Portal
                   </span>
                 </div>
-              </Link>
+              </a>
 
               {/* Desktop Nav Links */}
               <nav className="hidden md:flex items-center gap-1.5">
-                <Link
+                <a
                   href="/timetable"
-                  className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-medium cursor-pointer transition-all ${
+                  onClick={(e) => { e.preventDefault(); navigateTo('/timetable'); }}
+                  className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
                     isActive('/timetable')
-                      ? 'bg-slate-100 text-slate-900 shadow-2xs font-semibold'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                      ? 'bg-slate-900 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                   }`}
                 >
                   <Calendar className="w-3.5 h-3.5" />
                   Timetable
-                </Link>
+                </a>
 
-                <Link
+                <a
                   href="/assignments"
-                  className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-medium cursor-pointer transition-all ${
+                  onClick={(e) => { e.preventDefault(); navigateTo('/assignments'); }}
+                  className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
                     isActive('/assignments')
-                      ? 'bg-slate-100 text-slate-900 shadow-2xs font-semibold'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                      ? 'bg-slate-900 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                   }`}
                 >
                   <BookOpen className="w-3.5 h-3.5" />
                   Assignments
-                </Link>
+                </a>
 
                 {user && (
-                  <Link
+                  <a
                     href="/dashboard"
-                    className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-medium cursor-pointer transition-all ${
+                    onClick={(e) => { e.preventDefault(); navigateTo('/dashboard'); }}
+                    className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
                       isActive('/dashboard')
-                        ? 'bg-blue-50 text-blue-700 shadow-2xs font-semibold'
-                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                        ? 'bg-blue-600 text-white shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                     }`}
                   >
                     <LayoutDashboard className="w-3.5 h-3.5" />
                     Dashboard
-                  </Link>
+                  </a>
                 )}
 
                 {user && (user.role === 'admin' || user.role === 'superadmin') && (
-                  <Link
+                  <a
                     href="/admin"
-                    className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-medium cursor-pointer transition-all ${
+                    onClick={(e) => { e.preventDefault(); navigateTo('/admin'); }}
+                    className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
                       isActive('/admin')
-                        ? 'bg-purple-50 text-purple-700 shadow-2xs font-semibold'
-                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                        ? 'bg-purple-700 text-white shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                     }`}
                   >
                     <Shield className="w-3.5 h-3.5" />
-                    Admin
-                  </Link>
+                    Admin Panel
+                  </a>
                 )}
               </nav>
             </div>
@@ -159,8 +167,9 @@ export default function Navbar() {
               {user ? (
                 <div className="flex items-center gap-3 pl-2 border-l border-slate-200">
                   {/* Notifications Link */}
-                  <Link
+                  <a
                     href="/dashboard?tab=notifications"
+                    onClick={(e) => { e.preventDefault(); navigateTo('/dashboard?tab=notifications'); }}
                     className="relative p-2 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
                     title="Notifications"
                   >
@@ -170,7 +179,7 @@ export default function Navbar() {
                         {notifCount > 9 ? '9+' : notifCount}
                       </span>
                     )}
-                  </Link>
+                  </a>
 
                   {/* User Profile Pill */}
                   <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200/80">
@@ -181,7 +190,7 @@ export default function Navbar() {
                       <span className="text-xs font-semibold text-slate-900 leading-tight truncate max-w-[110px]">
                         {user.name ? user.name.split(' ')[0] : 'User'}
                       </span>
-                      <span className="text-[10px] text-slate-500 capitalize leading-none">
+                      <span className="text-[10px] text-slate-500 capitalize leading-none font-medium">
                         {user.role}
                       </span>
                     </div>
@@ -199,18 +208,20 @@ export default function Navbar() {
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
-                  <Link
+                  <a
                     href="/login"
-                    className="btn-ghost text-xs py-2 px-3.5 cursor-pointer"
+                    onClick={(e) => { e.preventDefault(); navigateTo('/login'); }}
+                    className="btn-secondary text-xs py-2 px-3.5 cursor-pointer shadow-2xs font-semibold"
                   >
                     Log in
-                  </Link>
-                  <Link
+                  </a>
+                  <a
                     href="/register"
-                    className="btn-primary text-xs py-2 px-4 shadow-2xs cursor-pointer"
+                    onClick={(e) => { e.preventDefault(); navigateTo('/register'); }}
+                    className="btn-primary text-xs py-2 px-4 shadow-2xs cursor-pointer font-semibold"
                   >
                     Get Started
-                  </Link>
+                  </a>
                 </div>
               )}
             </div>
@@ -242,51 +253,51 @@ export default function Navbar() {
 
         {/* Mobile Navigation Drawer */}
         {menuOpen && (
-          <div className="md:hidden border-t border-slate-200 bg-white/98 backdrop-blur-md px-4 pt-3 pb-6 space-y-3 animate-fade-in">
+          <div className="md:hidden border-t border-slate-200 bg-white px-4 pt-3 pb-6 space-y-3 shadow-xl animate-fade-in">
             <div className="space-y-1">
-              <Link
+              <a
                 href="/timetable"
-                onClick={() => setMenuOpen(false)}
-                className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium cursor-pointer ${
-                  isActive('/timetable') ? 'bg-slate-100 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-50'
+                onClick={(e) => { e.preventDefault(); navigateTo('/timetable'); }}
+                className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold cursor-pointer ${
+                  isActive('/timetable') ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'
                 }`}
               >
                 <Calendar className="w-4 h-4" />
                 Timetable
-              </Link>
-              <Link
+              </a>
+              <a
                 href="/assignments"
-                onClick={() => setMenuOpen(false)}
-                className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium cursor-pointer ${
-                  isActive('/assignments') ? 'bg-slate-100 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-50'
+                onClick={(e) => { e.preventDefault(); navigateTo('/assignments'); }}
+                className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold cursor-pointer ${
+                  isActive('/assignments') ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'
                 }`}
               >
                 <BookOpen className="w-4 h-4" />
                 Assignments
-              </Link>
+              </a>
               {user && (
-                <Link
+                <a
                   href="/dashboard"
-                  onClick={() => setMenuOpen(false)}
-                  className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium cursor-pointer ${
-                    isActive('/dashboard') ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-slate-600 hover:bg-slate-50'
+                  onClick={(e) => { e.preventDefault(); navigateTo('/dashboard'); }}
+                  className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold cursor-pointer ${
+                    isActive('/dashboard') ? 'bg-blue-600 text-white' : 'text-slate-600 hover:bg-slate-50'
                   }`}
                 >
                   <LayoutDashboard className="w-4 h-4" />
                   Personal Dashboard
-                </Link>
+                </a>
               )}
               {user && (user.role === 'admin' || user.role === 'superadmin') && (
-                <Link
+                <a
                   href="/admin"
-                  onClick={() => setMenuOpen(false)}
-                  className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium cursor-pointer ${
-                    isActive('/admin') ? 'bg-purple-50 text-purple-700 font-semibold' : 'text-slate-600 hover:bg-slate-50'
+                  onClick={(e) => { e.preventDefault(); navigateTo('/admin'); }}
+                  className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold cursor-pointer ${
+                    isActive('/admin') ? 'bg-purple-700 text-white' : 'text-slate-600 hover:bg-slate-50'
                   }`}
                 >
                   <Shield className="w-4 h-4" />
                   Admin Panel
-                </Link>
+                </a>
               )}
             </div>
 
@@ -311,20 +322,20 @@ export default function Navbar() {
               </div>
             ) : (
               <div className="pt-3 border-t border-slate-100 grid grid-cols-2 gap-2">
-                <Link
+                <a
                   href="/login"
-                  onClick={() => setMenuOpen(false)}
-                  className="btn-secondary text-xs text-center py-2.5 cursor-pointer"
+                  onClick={(e) => { e.preventDefault(); navigateTo('/login'); }}
+                  className="btn-secondary text-xs text-center py-2.5 cursor-pointer font-semibold"
                 >
                   Log in
-                </Link>
-                <Link
+                </a>
+                <a
                   href="/register"
-                  onClick={() => setMenuOpen(false)}
-                  className="btn-primary text-xs text-center py-2.5 cursor-pointer"
+                  onClick={(e) => { e.preventDefault(); navigateTo('/register'); }}
+                  className="btn-primary text-xs text-center py-2.5 cursor-pointer font-semibold"
                 >
                   Sign up
-                </Link>
+                </a>
               </div>
             )}
           </div>

@@ -464,39 +464,59 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* Navigation Tabs */}
-        <div className="flex items-center gap-2 border-b border-slate-200/80 pb-px">
+        {/* Navigation Tabs Bar with Clear Spacing */}
+        <div className="bg-slate-100/90 p-1.5 rounded-2xl flex flex-wrap items-center gap-2 border border-slate-200/90 shadow-2xs">
           <button
+            type="button"
             onClick={() => setActiveTab('overview')}
-            className={`tab-item ${activeTab === 'overview' ? 'tab-item-active' : 'tab-item-inactive'}`}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              activeTab === 'overview'
+                ? 'bg-white text-slate-900 shadow-sm border border-slate-200/90 ring-1 ring-black/5'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-white/70'
+            }`}
           >
-            <BarChart3 className="w-3.5 h-3.5 inline mr-1.5" />
-            Overview
+            <BarChart3 className="w-4 h-4 text-blue-600 shrink-0" />
+            <span>Overview</span>
           </button>
 
           <button
+            type="button"
             onClick={() => setActiveTab('timetable')}
-            className={`tab-item ${activeTab === 'timetable' ? 'tab-item-active' : 'tab-item-inactive'}`}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              activeTab === 'timetable'
+                ? 'bg-white text-slate-900 shadow-sm border border-slate-200/90 ring-1 ring-black/5'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-white/70'
+            }`}
           >
-            <Calendar className="w-3.5 h-3.5 inline mr-1.5" />
-            Manage Timetables & Batches
+            <Calendar className="w-4 h-4 text-indigo-600 shrink-0" />
+            <span>Manage Timetables & Batches</span>
           </button>
 
           <button
+            type="button"
             onClick={() => setActiveTab('assignments')}
-            className={`tab-item ${activeTab === 'assignments' ? 'tab-item-active' : 'tab-item-inactive'}`}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              activeTab === 'assignments'
+                ? 'bg-white text-slate-900 shadow-sm border border-slate-200/90 ring-1 ring-black/5'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-white/70'
+            }`}
           >
-            <BookOpen className="w-3.5 h-3.5 inline mr-1.5" />
-            Manage Assignments
+            <BookOpen className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>Manage Assignments</span>
           </button>
 
           {isSuperAdmin && (
             <button
+              type="button"
               onClick={() => setActiveTab('users')}
-              className={`tab-item ${activeTab === 'users' ? 'tab-item-active' : 'tab-item-inactive'}`}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                activeTab === 'users'
+                  ? 'bg-white text-slate-900 shadow-sm border border-slate-200/90 ring-1 ring-black/5'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/70'
+              }`}
             >
-              <Users className="w-3.5 h-3.5 inline mr-1.5" />
-              Users & Permissions
+              <Users className="w-4 h-4 text-purple-600 shrink-0" />
+              <span>Users & Permissions</span>
             </button>
           )}
         </div>
