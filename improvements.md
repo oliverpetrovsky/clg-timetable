@@ -5,5 +5,6 @@
 - dashboard should show assignments :: solved ::
 - fix sort dropdown styling for assignments and tasks :: solved ::
 - add upcoming quizes and exam tracking :: solved ::
+- batch targeting for quizzes (e.g. all 1st years, only AI&DS, CSE Sec A, custom branches) :: solved ::
 - weekly timetable matrix view :: solved ::
 - monthly schedule & academic calendar view :: solved ::

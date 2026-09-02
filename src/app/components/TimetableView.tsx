@@ -983,12 +983,17 @@ export default function TimetableView({
                     {selectedDayEvents.quizzes.map((quiz: any) => (
                       <div
                         key={quiz.id}
-                        className="p-3 rounded-xl bg-purple-50/80 border border-purple-200 text-xs space-y-1"
+                        className="p-3 rounded-xl bg-purple-50/80 border border-purple-200 text-xs space-y-1.5"
                       >
-                        <div className="flex items-center justify-between">
+                        <div className="flex flex-wrap items-center justify-between gap-1">
                           <span className="badge bg-purple-200 text-purple-900 text-[9px] font-bold">
                             {quiz.subject}
                           </span>
+                          {quiz.targetLabel && (
+                            <span className="badge bg-indigo-100 text-indigo-800 text-[9px] font-bold">
+                              🎯 {quiz.targetLabel}
+                            </span>
+                          )}
                           {quiz.weightage && (
                             <span className="text-[10px] font-semibold text-purple-700">
                               {quiz.weightage}
@@ -998,7 +1003,7 @@ export default function TimetableView({
                         <p className="font-bold text-slate-900">{quiz.title}</p>
                         {quiz.time && (
                           <p className="text-[11px] text-slate-500 flex items-center gap-1">
-                            <Clock className="w-3 h-3" /> {quiz.time} {quiz.room ? `• ${quiz.room}` : ''}
+                            <Clock className="w-3 h-3 text-purple-600" /> {quiz.time} {quiz.room ? `• ${quiz.room}` : ''}
                           </p>
                         )}
                       </div>

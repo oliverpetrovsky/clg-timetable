@@ -4,55 +4,109 @@ import { Quiz, Branch, Notification } from '@/lib/models';
 import { getCurrentUser } from '@/lib/auth';
 import mongoose from 'mongoose';
 
-// Fallback dynamic seed quizzes when collection is empty for the batch
+// Fallback seed quizzes with rich batch targeting
 const DEFAULT_QUIZZES = [
+  {
+    subject: 'Mathematics - 1',
+    title: 'Midterm 1: Linear Algebra & Vector Spaces',
+    description: 'Eigenvalues, Eigenvectors, Gram-Schmidt orthogonalization, and Matrix Factorizations (SVD, LU). Common for all first years.',
+    dateOffsetDays: 3,
+    time: '02:00 PM – 03:30 PM',
+    room: 'Main Auditorium (Audi-1)',
+    totalMarks: 50,
+    weightage: '20%',
+    topics: ['Eigenvalues & Eigenvectors', 'Vector Spaces', 'SVD & LU Decomposition'],
+    status: 'upcoming',
+    targetType: 'all_first_years',
+    targetBranchCodes: ['ALL', 'CSE', 'ECE', 'AI&DS'],
+    targetLabel: 'All 1st Years (CSE, ECE, AI&DS)',
+    year: 1,
+    section: 'ALL',
+  },
+  {
+    subject: 'Probability & Statistics',
+    title: 'Quiz 1: Random Variables & Joint Distributions',
+    description: 'Conditional probability, Bayes Theorem, Continuous Random Variables, Expectation, and Joint CDF/PDF.',
+    dateOffsetDays: 6,
+    time: '11:00 AM – 12:00 PM',
+    room: 'Room 203 (AI Wing)',
+    totalMarks: 25,
+    weightage: '10%',
+    topics: ['Bayes Theorem', 'Random Variables', 'Joint Probability Distributions'],
+    status: 'upcoming',
+    targetType: 'specific_branches',
+    targetBranchCodes: ['AI&DS'],
+    targetLabel: 'AI&DS Year 1 Only',
+    year: 1,
+    section: 'B',
+  },
   {
     subject: 'Data Structures & Algorithms',
     title: 'Quiz 1: Advanced Trees & Graph Traversals',
     description: 'Covers Red-Black Trees, AVL Trees, BFS/DFS, Dijkstra, and Topological Sort with complexity analysis.',
-    dateOffsetDays: 3,
+    dateOffsetDays: 9,
     time: '10:00 AM – 11:00 AM',
     room: 'Lab 201',
     totalMarks: 25,
     weightage: '10%',
     topics: ['AVL Trees', 'Red-Black Trees', 'Dijkstra Algorithm', 'Topological Sort'],
     status: 'upcoming',
+    targetType: 'specific_branches',
+    targetBranchCodes: ['CSE'],
+    targetLabel: 'CSE Year 1 (Section A)',
+    year: 1,
+    section: 'A',
   },
   {
-    subject: 'Mathematics - 1',
-    title: 'Midterm Assessment: Linear Algebra & Vector Spaces',
-    description: 'Eigenvalues, Eigenvectors, Gram-Schmidt orthogonalization, and Matrix Factorizations (SVD, LU).',
-    dateOffsetDays: 7,
-    time: '02:00 PM – 03:30 PM',
-    room: 'Academic Block Audi-1',
-    totalMarks: 50,
-    weightage: '20%',
-    topics: ['Eigenvalues & Eigenvectors', 'Vector Spaces', 'SVD & LU Decomposition'],
+    subject: 'Basic Electronic Circuits',
+    title: 'Quiz 2: Diode Models & Op-Amp Circuits',
+    description: 'Diode clipping/clamping, Zener voltage regulators, inverting & non-inverting Op-Amp configurations.',
+    dateOffsetDays: 13,
+    time: '09:30 AM – 10:30 AM',
+    room: 'Hardware Lab 102',
+    totalMarks: 20,
+    weightage: '10%',
+    topics: ['Zener Regulators', 'Op-Amp Circuits', 'Filter Design'],
     status: 'upcoming',
+    targetType: 'specific_section',
+    targetBranchCodes: ['ECE', 'AI&DS'],
+    targetLabel: 'Section B (ECE & AI&DS)',
+    year: 1,
+    section: 'B',
   },
   {
     subject: 'Computer Networks',
     title: 'Quiz 2: Transport & Network Layer Protocols',
     description: 'TCP 3-way handshake, Congestion Control (Tahoe/Reno), CIDR Subnetting, and Distance Vector Routing.',
-    dateOffsetDays: 12,
+    dateOffsetDays: 16,
     time: '11:30 AM – 12:30 PM',
     room: 'Room 304',
     totalMarks: 20,
     weightage: '10%',
     topics: ['TCP Congestion Control', 'CIDR Subnetting', 'BGP & OSPF Routing'],
     status: 'upcoming',
+    targetType: 'all_branch_year',
+    targetBranchCodes: ['CSE', 'ECE'],
+    targetLabel: 'CSE & ECE Year 2',
+    year: 2,
+    section: 'ALL',
   },
   {
     subject: 'Database Management Systems',
     title: 'Lab Quiz: SQL Triggers, Indices & Normalization',
     description: 'Hands-on query execution, 3NF/BCNF Decomposition, and indexing strategies in PostgreSQL.',
-    dateOffsetDays: 18,
+    dateOffsetDays: 20,
     time: '02:00 PM – 04:00 PM',
     room: 'Software Lab 3',
     totalMarks: 30,
     weightage: '15%',
     topics: ['Triggers & Stored Procedures', 'BCNF Decomposition', 'B+ Tree Indexing'],
     status: 'upcoming',
+    targetType: 'specific_branches',
+    targetBranchCodes: ['CSE', 'AI&DS'],
+    targetLabel: 'CSE & AI&DS Year 2',
+    year: 2,
+    section: 'ALL',
   },
 ];
 
@@ -60,46 +114,32 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const branchId = searchParams.get('branchId');
-    const year = searchParams.get('year');
+    const yearParam = searchParams.get('year');
     const status = searchParams.get('status') || 'all';
     const section = searchParams.get('section');
+    const targetTypeParam = searchParams.get('targetType');
 
     await connectToDatabase();
 
-    const query: Record<string, any> = {};
-
-    if (year) {
-      query.year = parseInt(year);
-    }
-
-    if (status !== 'all') {
-      query.status = status;
-    }
-
-    if (section && section.toUpperCase() !== 'ALL') {
-      const secUpper = section.toUpperCase().trim();
-      query.$or = [
-        { section: null },
-        { section: '' },
-        { section: 'ALL' },
-        { section: 'All' },
-        { section: secUpper },
-      ];
-    }
-
-    if (branchId) {
+    // Resolve branch document if branchId is provided
+    let branchDoc: any = null;
+    let branchCode = '';
+    if (branchId && branchId !== 'all') {
       if (mongoose.Types.ObjectId.isValid(branchId)) {
-        query.branchId = new mongoose.Types.ObjectId(branchId);
+        branchDoc = await Branch.findById(branchId).lean();
       } else {
-        const bDoc = await Branch.findOne({
+        branchDoc = await Branch.findOne({
           $or: [{ code: branchId.toUpperCase() }, { name: branchId }],
-        });
-        if (bDoc) query.branchId = bDoc._id;
+        }).lean();
+      }
+      if (branchDoc) {
+        branchCode = branchDoc.code;
       }
     }
 
-    let docs = await Quiz.find(query)
+    let docs = await Quiz.find(status !== 'all' ? { status } : {})
       .populate('branchId', 'name code')
+      .populate('targetBranches', 'name code')
       .populate('createdBy', 'name')
       .sort({ date: 1 })
       .lean();
@@ -115,10 +155,10 @@ export async function GET(req: NextRequest) {
         return {
           id: `seed-quiz-${idx + 1}`,
           _id: `seed-quiz-${idx + 1}`,
-          branch_id: branchId || '1',
-          branchId: branchId || '1',
-          year: year ? parseInt(year) : 1,
-          section: section || 'A',
+          branch_id: branchDoc?._id?.toString() || branchId || '1',
+          branchId: branchDoc?._id?.toString() || branchId || '1',
+          year: q.year,
+          section: q.section,
           subject: q.subject,
           title: q.title,
           description: q.description,
@@ -130,37 +170,110 @@ export async function GET(req: NextRequest) {
           weightage: q.weightage,
           topics: q.topics,
           status: q.status,
-          branch_name: 'Engineering',
-          branch_code: 'CSE',
+          targetType: q.targetType,
+          targetBranchCodes: q.targetBranchCodes,
+          targetLabel: q.targetLabel,
+          branch_name: branchDoc?.name || 'Academic Department',
+          branch_code: branchCode || 'ALL',
           created_by_name: 'Academic Office',
         };
       });
 
-      return NextResponse.json({ quizzes: generated });
+      // Filter generated items based on request
+      const filtered = generated.filter(q => {
+        // Target type filter
+        if (targetTypeParam && targetTypeParam !== 'all' && q.targetType !== targetTypeParam) {
+          return false;
+        }
+
+        // Year filter
+        if (yearParam && parseInt(yearParam) !== q.year) {
+          // If quiz is all_years, let it pass
+          if (q.targetType !== 'all') return false;
+        }
+
+        // Batch / Branch targeting
+        if (branchCode) {
+          const isAllTarget =
+            q.targetType === 'all_first_years' ||
+            q.targetType === 'all' ||
+            (q.targetBranchCodes && (q.targetBranchCodes.includes('ALL') || q.targetBranchCodes.includes(branchCode)));
+
+          if (!isAllTarget) return false;
+        }
+
+        // Section filter
+        if (section && section.toUpperCase() !== 'ALL' && q.section && q.section.toUpperCase() !== 'ALL') {
+          if (q.section.toUpperCase() !== section.toUpperCase()) return false;
+        }
+
+        return true;
+      });
+
+      return NextResponse.json({ quizzes: filtered.length > 0 ? filtered : generated });
     }
 
-    const quizzes = docs.map((q: any) => ({
-      id: q._id.toString(),
-      _id: q._id.toString(),
-      branch_id: q.branchId?._id?.toString() || branchId,
-      branchId: q.branchId?._id?.toString() || branchId,
-      year: q.year,
-      section: q.section || null,
-      subject: q.subject,
-      title: q.title,
-      description: q.description || null,
-      date: q.date,
-      due_date: q.date,
-      time: q.time || null,
-      room: q.room || null,
-      totalMarks: q.totalMarks || null,
-      weightage: q.weightage || null,
-      topics: q.topics || [],
-      status: q.status || 'upcoming',
-      branch_name: q.branchId?.name || '',
-      branch_code: q.branchId?.code || '',
-      created_by_name: q.createdBy?.name || '',
-    }));
+    // Format DB docs
+    let quizzes = docs.map((q: any) => {
+      const bCodes = q.targetBranchCodes || (q.targetBranches?.map((b: any) => b.code) || []);
+      if (q.branchId?.code && !bCodes.includes(q.branchId.code)) {
+        bCodes.push(q.branchId.code);
+      }
+
+      return {
+        id: q._id.toString(),
+        _id: q._id.toString(),
+        branch_id: q.branchId?._id?.toString() || branchId,
+        branchId: q.branchId?._id?.toString() || branchId,
+        year: q.year,
+        section: q.section || null,
+        subject: q.subject,
+        title: q.title,
+        description: q.description || null,
+        date: q.date,
+        due_date: q.date,
+        time: q.time || null,
+        room: q.room || null,
+        totalMarks: q.totalMarks || null,
+        weightage: q.weightage || null,
+        topics: q.topics || [],
+        status: q.status || 'upcoming',
+        targetType: q.targetType || 'specific_branches',
+        targetBranchCodes: bCodes,
+        targetLabel: q.targetLabel || (q.targetType === 'all_first_years' ? 'All 1st Years (CSE, ECE, AI&DS)' : `${bCodes.join(', ') || 'Branch'} Year ${q.year}`),
+        branch_name: q.branchId?.name || '',
+        branch_code: q.branchId?.code || '',
+        created_by_name: q.createdBy?.name || '',
+      };
+    });
+
+    // Apply batch targeting filters
+    if (yearParam || branchCode || section || targetTypeParam) {
+      quizzes = quizzes.filter(q => {
+        if (targetTypeParam && targetTypeParam !== 'all' && q.targetType !== targetTypeParam) {
+          return false;
+        }
+
+        if (yearParam && parseInt(yearParam) !== q.year) {
+          if (q.targetType !== 'all') return false;
+        }
+
+        if (branchCode) {
+          const isTargeted =
+            q.targetType === 'all_first_years' ||
+            q.targetType === 'all' ||
+            (q.targetBranchCodes && (q.targetBranchCodes.includes('ALL') || q.targetBranchCodes.includes(branchCode)));
+
+          if (!isTargeted) return false;
+        }
+
+        if (section && section.toUpperCase() !== 'ALL' && q.section && q.section.toUpperCase() !== 'ALL') {
+          if (q.section.toUpperCase() !== section.toUpperCase()) return false;
+        }
+
+        return true;
+      });
+    }
 
     return NextResponse.json({ quizzes });
   } catch (error: any) {
@@ -183,21 +296,49 @@ export async function POST(req: NextRequest) {
 
     await connectToDatabase();
 
-    let branchObjectId: mongoose.Types.ObjectId | undefined;
-    if (body.branchId) {
+    let targetBranchCodes = body.targetBranchCodes || [];
+    let targetType = body.targetType || 'specific_branches';
+    let targetLabel = body.targetLabel;
+
+    // Resolve branch ObjectIds
+    let branchObjectIds: mongoose.Types.ObjectId[] = [];
+    if (targetBranchCodes.length > 0) {
+      const branches = await Branch.find({ code: { $in: targetBranchCodes.map((c: string) => c.toUpperCase()) } });
+      branchObjectIds = branches.map(b => b._id as mongoose.Types.ObjectId);
+    }
+
+    let primaryBranchId = branchObjectIds[0];
+    if (!primaryBranchId && body.branchId) {
       if (mongoose.Types.ObjectId.isValid(body.branchId.toString())) {
-        branchObjectId = new mongoose.Types.ObjectId(body.branchId.toString());
+        primaryBranchId = new mongoose.Types.ObjectId(body.branchId.toString());
       } else {
         const bDoc = await Branch.findOne({
           $or: [{ code: body.branchId.toString().toUpperCase() }, { name: body.branchId.toString() }],
         });
-        if (bDoc) branchObjectId = bDoc._id as mongoose.Types.ObjectId;
+        if (bDoc) primaryBranchId = bDoc._id as mongoose.Types.ObjectId;
       }
     }
 
-    if (!branchObjectId) {
+    if (!primaryBranchId) {
       const defaultBranch = await Branch.findOne();
-      if (defaultBranch) branchObjectId = defaultBranch._id as mongoose.Types.ObjectId;
+      if (defaultBranch) primaryBranchId = defaultBranch._id as mongoose.Types.ObjectId;
+    }
+
+    // Auto-generate target label if not supplied
+    if (!targetLabel) {
+      if (targetType === 'all_first_years') {
+        targetLabel = 'All 1st Years (CSE, ECE, AI&DS)';
+      } else if (targetType === 'all_branch_year') {
+        targetLabel = `All Year ${body.year || 1} Students`;
+      } else if (targetType === 'specific_section') {
+        targetLabel = `Section ${body.section || 'B'} (${targetBranchCodes.join(' & ') || 'Batch'})`;
+      } else if (targetBranchCodes.length === 1) {
+        targetLabel = `${targetBranchCodes[0]} Year ${body.year || 1} Only`;
+      } else if (targetBranchCodes.length > 1) {
+        targetLabel = `${targetBranchCodes.join(' & ')} Year ${body.year || 1}`;
+      } else {
+        targetLabel = `Year ${body.year || 1} Batch`;
+      }
     }
 
     const createdByObjectId = user && mongoose.Types.ObjectId.isValid(user.id)
@@ -205,7 +346,11 @@ export async function POST(req: NextRequest) {
       : undefined;
 
     const newQuiz = await Quiz.create({
-      branchId: branchObjectId,
+      branchId: primaryBranchId,
+      targetBranches: branchObjectIds,
+      targetBranchCodes: targetBranchCodes.length > 0 ? targetBranchCodes : ['ALL'],
+      targetType,
+      targetLabel,
       year: body.year || 1,
       section: body.section || undefined,
       subject: body.subject,
@@ -221,11 +366,11 @@ export async function POST(req: NextRequest) {
       createdBy: createdByObjectId,
     });
 
-    if (branchObjectId) {
+    if (primaryBranchId) {
       await Notification.create({
-        branchId: branchObjectId,
+        branchId: primaryBranchId,
         year: body.year || 1,
-        title: 'New Quiz Announced',
+        title: `New Quiz Announced: ${targetLabel}`,
         message: `"${body.title}" for ${body.subject} on ${body.date}${body.time ? ` (${body.time})` : ''}`,
         type: 'info',
       });

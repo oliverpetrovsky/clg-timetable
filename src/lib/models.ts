@@ -188,8 +188,13 @@ BatchSchema.index({ branchId: 1, year: 1, section: 1 }, { unique: true });
 
 // ================= QUIZ =================
 export interface IQuiz extends Document {
-  branchId: mongoose.Types.ObjectId;
+  branchId?: mongoose.Types.ObjectId;
+  targetBranches?: mongoose.Types.ObjectId[];
+  targetBranchCodes?: string[];
+  targetType?: 'all_first_years' | 'all_branch_year' | 'specific_branches' | 'specific_section' | 'all' | string;
+  targetLabel?: string;
   year: number;
+  targetYears?: number[];
   section?: string;
   subject: string;
   title: string;
@@ -208,8 +213,13 @@ export interface IQuiz extends Document {
 
 const QuizSchema = new Schema<IQuiz>(
   {
-    branchId: { type: Schema.Types.ObjectId, ref: 'Branch', required: true, index: true },
+    branchId: { type: Schema.Types.ObjectId, ref: 'Branch', index: true },
+    targetBranches: [{ type: Schema.Types.ObjectId, ref: 'Branch' }],
+    targetBranchCodes: [{ type: String }],
+    targetType: { type: String, default: 'specific_branches' },
+    targetLabel: { type: String },
     year: { type: Number, required: true },
+    targetYears: [{ type: Number }],
     section: { type: String },
     subject: { type: String, required: true },
     title: { type: String, required: true },

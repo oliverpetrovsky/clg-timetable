@@ -20,7 +20,10 @@ import {
   X,
   Layers,
   ArrowUpDown,
-  Tag
+  Tag,
+  Users,
+  Target,
+  Check
 } from 'lucide-react';
 
 export interface QuizItem {
@@ -38,6 +41,9 @@ export interface QuizItem {
   weightage?: string;
   topics?: string[];
   status: 'upcoming' | 'completed' | 'cancelled';
+  targetType?: 'all_first_years' | 'all_branch_year' | 'specific_branches' | 'specific_section' | 'all' | string;
+  targetBranchCodes?: string[];
+  targetLabel?: string;
   branch_name?: string;
   branch_code?: string;
 }
@@ -49,6 +55,69 @@ interface QuizListProps {
   showFilters?: boolean;
   onQuizCountChange?: (count: number) => void;
 }
+
+const TARGET_PRESETS = [
+  {
+    id: 'all_first_years',
+    label: 'All 1st Years (CSE, ECE, AI&DS)',
+    shortLabel: 'All 1st Years',
+    type: 'all_first_years',
+    branches: ['ALL', 'CSE', 'ECE', 'AI&DS'],
+    year: 1,
+    section: 'ALL',
+    badgeColor: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+  },
+  {
+    id: 'aids_only',
+    label: 'AI&DS Year 1 Only',
+    shortLabel: 'AI&DS Year 1',
+    type: 'specific_branches',
+    branches: ['AI&DS'],
+    year: 1,
+    section: 'B',
+    badgeColor: 'bg-purple-50 text-purple-700 border-purple-200',
+  },
+  {
+    id: 'cse_sec_a',
+    label: 'CSE Year 1 (Section A)',
+    shortLabel: 'CSE Sec A',
+    type: 'specific_branches',
+    branches: ['CSE'],
+    year: 1,
+    section: 'A',
+    badgeColor: 'bg-blue-50 text-blue-700 border-blue-200',
+  },
+  {
+    id: 'sec_b_ece_aids',
+    label: 'Section B (ECE & AI&DS)',
+    shortLabel: 'Sec B (ECE + AI&DS)',
+    type: 'specific_section',
+    branches: ['ECE', 'AI&DS'],
+    year: 1,
+    section: 'B',
+    badgeColor: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  },
+  {
+    id: 'cse_ece_year2',
+    label: 'CSE & ECE Year 2',
+    shortLabel: 'CSE & ECE Y2',
+    type: 'all_branch_year',
+    branches: ['CSE', 'ECE'],
+    year: 2,
+    section: 'ALL',
+    badgeColor: 'bg-amber-50 text-amber-800 border-amber-200',
+  },
+  {
+    id: 'custom',
+    label: 'Custom Batch Target',
+    shortLabel: 'Custom Target',
+    type: 'custom',
+    branches: [],
+    year: 1,
+    section: 'ALL',
+    badgeColor: 'bg-slate-100 text-slate-700 border-slate-200',
+  },
+];
 
 export default function QuizList({
   initialBranchId,
@@ -64,14 +133,18 @@ export default function QuizList({
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('all');
-  const [selectedStatus, setSelectedStatus] = useState<'all' | 'upcoming' | 'completed'>('all');
+  const [selectedTargetFilter, setSelectedTargetFilter] = useState('all');
   const [sortBy, setSortBy] = useState<'date' | 'subject' | 'weightage'>('date');
 
   // Preparation status tracking (persisted in localStorage)
   const [prepMap, setPrepMap] = useState<Record<string, 'not_started' | 'preparing' | 'ready'>>({});
 
-  // Add Quiz Form
+  // Add Quiz Form State
   const [showAddModal, setShowAddModal] = useState(false);
+  const [selectedPresetId, setSelectedPresetId] = useState('all_first_years');
+  const [customBranches, setCustomBranches] = useState<string[]>(['AI&DS']);
+  const [customYear, setCustomYear] = useState(1);
+  const [customSection, setCustomSection] = useState('ALL');
   const [newTitle, setNewTitle] = useState('');
   const [newSubject, setNewSubject] = useState('');
   const [newDate, setNewDate] = useState('');
@@ -89,6 +162,7 @@ export default function QuizList({
   const [editTime, setEditTime] = useState('');
   const [editRoom, setEditRoom] = useState('');
   const [editDesc, setEditDesc] = useState('');
+  const [editTargetLabel, setEditTargetLabel] = useState('');
 
   // Sync props
   useEffect(() => {
@@ -120,11 +194,12 @@ export default function QuizList({
   // Fetch quizzes
   useEffect(() => {
     setLoading(true);
-    const bParam = branchId ? `branchId=${branchId}` : 'branchId=1';
-    const yParam = `year=${year}`;
-    const sParam = section ? `&section=${encodeURIComponent(section)}` : '';
+    const bParam = branchId ? `branchId=${branchId}` : '';
+    const yParam = year ? `year=${year}` : '';
+    const sParam = section ? `section=${encodeURIComponent(section)}` : '';
+    const queryParts = [bParam, yParam, sParam].filter(Boolean).join('&');
 
-    fetch(`/api/quizzes?${bParam}&${yParam}${sParam}`)
+    fetch(`/api/quizzes${queryParts ? `?${queryParts}` : ''}`)
       .then(res => res.json())
       .then(data => {
         const list = data.quizzes || [];
@@ -143,6 +218,25 @@ export default function QuizList({
     });
     return Array.from(set).sort();
   }, [quizzes]);
+
+  // Target audience badge helper
+  const getTargetBadge = (quiz: QuizItem) => {
+    const label = quiz.targetLabel || (quiz.targetType === 'all_first_years' ? 'All 1st Years (CSE, ECE, AI&DS)' : `${quiz.targetBranchCodes?.join(', ') || 'Batch'} Year ${quiz.year}`);
+    
+    if (quiz.targetType === 'all_first_years' || label.toLowerCase().includes('all 1st') || label.toLowerCase().includes('all first')) {
+      return { label, color: 'bg-indigo-50 text-indigo-700 border-indigo-200' };
+    }
+    if (label.toLowerCase().includes('ai&ds') || quiz.targetBranchCodes?.includes('AI&DS')) {
+      return { label, color: 'bg-purple-50 text-purple-700 border-purple-200' };
+    }
+    if (label.toLowerCase().includes('cse') || quiz.targetBranchCodes?.includes('CSE')) {
+      return { label, color: 'bg-blue-50 text-blue-700 border-blue-200' };
+    }
+    if (label.toLowerCase().includes('ece') || quiz.targetBranchCodes?.includes('ECE')) {
+      return { label, color: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
+    }
+    return { label, color: 'bg-slate-100 text-slate-700 border-slate-200' };
+  };
 
   // Date countdown helper
   const getCountdownBadge = (dateStr: string) => {
@@ -192,15 +286,39 @@ export default function QuizList({
     }
   };
 
-  // Add Quiz Handler
+  // Add Quiz Handler with Batch Targeting
   const handleAddQuiz = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTitle.trim() || !newSubject.trim() || !newDate) return;
 
+    let targetType = 'specific_branches';
+    let targetBranchCodes: string[] = [];
+    let targetYear = year || 1;
+    let targetSection = section || 'ALL';
+    let targetLabel = '';
+
+    const preset = TARGET_PRESETS.find(p => p.id === selectedPresetId);
+    if (preset && preset.id !== 'custom') {
+      targetType = preset.type;
+      targetBranchCodes = preset.branches;
+      targetYear = preset.year;
+      targetSection = preset.section;
+      targetLabel = preset.label;
+    } else {
+      targetType = 'specific_branches';
+      targetBranchCodes = customBranches.length > 0 ? customBranches : ['ALL'];
+      targetYear = customYear;
+      targetSection = customSection;
+      targetLabel = `${targetBranchCodes.join(' & ')} Year ${targetYear}${targetSection !== 'ALL' ? ` (Sec ${targetSection})` : ''}`;
+    }
+
     const payload = {
       branchId: branchId || '1',
-      year,
-      section: section || 'A',
+      year: targetYear,
+      section: targetSection,
+      targetType,
+      targetBranchCodes,
+      targetLabel,
       title: newTitle.trim(),
       subject: newSubject.trim(),
       date: newDate,
@@ -228,7 +346,6 @@ export default function QuizList({
         setQuizzes(prev => [created, ...prev]);
       }
     } catch {
-      // Local fallback
       const created: QuizItem = {
         id: `quiz-local-${Date.now()}`,
         ...payload,
@@ -265,6 +382,7 @@ export default function QuizList({
     setEditTime(quiz.time || '');
     setEditRoom(quiz.room || '');
     setEditDesc(quiz.description || '');
+    setEditTargetLabel(quiz.targetLabel || '');
   };
 
   const saveEditing = async (id: string) => {
@@ -281,6 +399,7 @@ export default function QuizList({
               time: editTime.trim(),
               room: editRoom.trim(),
               description: editDesc.trim(),
+              targetLabel: editTargetLabel.trim() || q.targetLabel,
             }
           : q
       )
@@ -298,6 +417,7 @@ export default function QuizList({
           time: editTime.trim(),
           room: editRoom.trim(),
           description: editDesc.trim(),
+          targetLabel: editTargetLabel.trim(),
         }),
       });
     } catch {}
@@ -311,16 +431,30 @@ export default function QuizList({
       if (selectedSubject !== 'all' && q.subject.toLowerCase() !== selectedSubject.toLowerCase()) {
         return false;
       }
-      if (selectedStatus !== 'all' && q.status !== selectedStatus) {
-        return false;
+      if (selectedTargetFilter !== 'all') {
+        const label = (q.targetLabel || '').toLowerCase();
+        const codes = q.targetBranchCodes || [];
+        if (selectedTargetFilter === 'all_first_years' && !(q.targetType === 'all_first_years' || label.includes('all 1st') || label.includes('all first'))) {
+          return false;
+        }
+        if (selectedTargetFilter === 'aids' && !codes.includes('AI&DS') && !label.includes('ai&ds')) {
+          return false;
+        }
+        if (selectedTargetFilter === 'cse' && !codes.includes('CSE') && !label.includes('cse')) {
+          return false;
+        }
+        if (selectedTargetFilter === 'ece' && !codes.includes('ECE') && !label.includes('ece')) {
+          return false;
+        }
       }
       if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase().trim();
         const matchesTitle = q.title.toLowerCase().includes(query);
         const matchesSubject = q.subject.toLowerCase().includes(query);
+        const matchesTarget = (q.targetLabel || '').toLowerCase().includes(query);
         const matchesDesc = q.description ? q.description.toLowerCase().includes(query) : false;
         const matchesRoom = q.room ? q.room.toLowerCase().includes(query) : false;
-        if (!matchesTitle && !matchesSubject && !matchesDesc && !matchesRoom) return false;
+        if (!matchesTitle && !matchesSubject && !matchesTarget && !matchesDesc && !matchesRoom) return false;
       }
       return true;
     });
@@ -339,7 +473,7 @@ export default function QuizList({
       }
       return 0;
     });
-  }, [quizzes, selectedSubject, selectedStatus, searchQuery, sortBy]);
+  }, [quizzes, selectedSubject, selectedTargetFilter, searchQuery, sortBy]);
 
   return (
     <div className="space-y-5">
@@ -355,7 +489,7 @@ export default function QuizList({
               </span>
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">
-              Track upcoming tests, weightage, venue, and study preparation
+              Targeted batch quizzes, tests, and study readiness tracking
             </p>
           </div>
 
@@ -364,26 +498,54 @@ export default function QuizList({
             className="btn-primary text-xs py-1.5 px-3.5 flex items-center gap-1.5 self-start sm:self-auto shadow-2xs"
           >
             <Plus className="w-3.5 h-3.5" />
-            <span>Add Quiz</span>
+            <span>Schedule Quiz</span>
           </button>
         </div>
 
-        {/* Toolbar: Search, Subject Filter & Sort */}
+        {/* Toolbar: Search, Subject Filter, Target Audience Filter & Sort */}
         <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
           {/* Search Box */}
-          <div className="md:col-span-4 relative">
+          <div className="md:col-span-3 relative">
             <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Search quiz topic or room..."
+              placeholder="Search quiz topic or batch..."
               className="input-field text-xs pl-9 py-2"
             />
           </div>
 
+          {/* Target Audience Batch Filter */}
+          <div className="md:col-span-3 flex items-center gap-1.5">
+            <div className="relative flex-1">
+              <Users className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              <select
+                value={selectedTargetFilter}
+                onChange={e => setSelectedTargetFilter(e.target.value)}
+                className="select-field text-xs pl-9 py-2 w-full font-medium text-slate-700"
+              >
+                <option value="all">All Target Batches</option>
+                <option value="all_first_years">🌟 All 1st Years</option>
+                <option value="aids">🤖 AI&DS Targets</option>
+                <option value="cse">💻 CSE Targets</option>
+                <option value="ece">⚡ ECE Targets</option>
+              </select>
+            </div>
+
+            {selectedTargetFilter !== 'all' && (
+              <button
+                onClick={() => setSelectedTargetFilter('all')}
+                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors shrink-0"
+                title="Clear audience filter"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
           {/* Subject Filter */}
-          <div className="md:col-span-4 flex items-center gap-1.5">
+          <div className="md:col-span-3 flex items-center gap-1.5">
             <div className="relative flex-1">
               <Tag className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
               <select
@@ -411,7 +573,7 @@ export default function QuizList({
           </div>
 
           {/* Sort Dropdown */}
-          <div className="md:col-span-4 flex items-center justify-end">
+          <div className="md:col-span-3 flex items-center justify-end">
             <div className="relative w-full">
               <ArrowUpDown className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
               <select
@@ -428,7 +590,7 @@ export default function QuizList({
         </div>
       </div>
 
-      {/* Add Quiz Modal Form */}
+      {/* Add Quiz Modal Form with Batch Targeting */}
       {showAddModal && (
         <form
           onSubmit={handleAddQuiz}
@@ -437,7 +599,7 @@ export default function QuizList({
           <div className="flex items-center justify-between pb-2 border-b border-purple-100">
             <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
               <GraduationCap className="w-4 h-4 text-purple-600" />
-              <span>Schedule New Quiz / Test</span>
+              <span>Schedule Quiz with Target Batch</span>
             </h3>
             <button
               type="button"
@@ -446,6 +608,100 @@ export default function QuizList({
             >
               <X className="w-4 h-4" />
             </button>
+          </div>
+
+          {/* Target Batch Selection Presets */}
+          <div className="space-y-2 p-3.5 rounded-xl bg-purple-50/40 border border-purple-100">
+            <label className="block text-xs font-bold text-slate-800 flex items-center gap-1.5">
+              <Target className="w-3.5 h-3.5 text-purple-600" />
+              <span>Select Target Batch / Audience:</span>
+            </label>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {TARGET_PRESETS.map(preset => {
+                const isSelected = selectedPresetId === preset.id;
+                return (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    onClick={() => setSelectedPresetId(preset.id)}
+                    className={`p-2 rounded-xl text-left border text-xs transition-all flex flex-col justify-between ${
+                      isSelected
+                        ? 'bg-purple-600 text-white border-purple-600 shadow-2xs font-semibold'
+                        : 'bg-white text-slate-700 border-slate-200 hover:border-purple-300'
+                    }`}
+                  >
+                    <span className="leading-tight">{preset.shortLabel}</span>
+                    <span className={`text-[10px] mt-1 ${isSelected ? 'text-purple-100' : 'text-slate-400'}`}>
+                      {preset.id === 'all_first_years' ? 'All 1st Years' : preset.id === 'custom' ? 'Pick custom' : `${preset.branches.join(', ')} Y${preset.year}`}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Custom Batch Config if 'custom' preset is picked */}
+            {selectedPresetId === 'custom' && (
+              <div className="pt-2 grid grid-cols-1 sm:grid-cols-3 gap-2.5 animate-fade-in border-t border-purple-100 mt-2">
+                {/* Branch selection */}
+                <div>
+                  <span className="block text-[10px] font-semibold text-slate-600 mb-1">Target Branches:</span>
+                  <div className="flex items-center gap-1">
+                    {['CSE', 'ECE', 'AI&DS'].map(bCode => {
+                      const isChecked = customBranches.includes(bCode);
+                      return (
+                        <button
+                          key={bCode}
+                          type="button"
+                          onClick={() => {
+                            setCustomBranches(prev =>
+                              isChecked
+                                ? prev.filter(c => c !== bCode)
+                                : [...prev, bCode]
+                            );
+                          }}
+                          className={`text-xs px-2.5 py-1 rounded-lg border font-medium transition-all ${
+                            isChecked
+                              ? 'bg-purple-100 text-purple-800 border-purple-300 font-bold'
+                              : 'bg-white text-slate-600 border-slate-200'
+                          }`}
+                        >
+                          {bCode}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Target Year */}
+                <div>
+                  <span className="block text-[10px] font-semibold text-slate-600 mb-1">Target Year:</span>
+                  <select
+                    value={customYear}
+                    onChange={e => setCustomYear(parseInt(e.target.value))}
+                    className="select-field text-xs py-1.5"
+                  >
+                    {[1, 2, 3, 4, 5].map(y => (
+                      <option key={y} value={y}>Year {y}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Target Section */}
+                <div>
+                  <span className="block text-[10px] font-semibold text-slate-600 mb-1">Target Section:</span>
+                  <select
+                    value={customSection}
+                    onChange={e => setCustomSection(e.target.value)}
+                    className="select-field text-xs py-1.5"
+                  >
+                    <option value="ALL">All Sections (A & B)</option>
+                    <option value="A">Section A Only</option>
+                    <option value="B">Section B Only</option>
+                  </select>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
@@ -457,7 +713,7 @@ export default function QuizList({
                 type="text"
                 value={newTitle}
                 onChange={e => setNewTitle(e.target.value)}
-                placeholder="e.g. Midterm 1: Graphs & Trees"
+                placeholder="e.g. Quiz 1: Probability & Random Variables"
                 className="input-field text-xs"
                 required
                 autoFocus
@@ -472,7 +728,7 @@ export default function QuizList({
                 type="text"
                 value={newSubject}
                 onChange={e => setNewSubject(e.target.value)}
-                placeholder="e.g. DSA, Mathematics, Networks"
+                placeholder="e.g. Probability, Linear Algebra, DSA"
                 className="input-field text-xs"
                 required
               />
@@ -508,7 +764,7 @@ export default function QuizList({
                 type="text"
                 value={newRoom}
                 onChange={e => setNewRoom(e.target.value)}
-                placeholder="Audi-1 / Lab 201"
+                placeholder="Audi-1 / Room 203"
                 className="input-field text-xs"
               />
             </div>
@@ -575,9 +831,9 @@ export default function QuizList({
           <div className="w-14 h-14 rounded-3xl bg-purple-50 text-purple-500 flex items-center justify-center mx-auto mb-3">
             <GraduationCap className="w-6 h-6 opacity-75" />
           </div>
-          <h3 className="text-base font-bold text-slate-800">No quizzes scheduled</h3>
+          <h3 className="text-base font-bold text-slate-800">No quizzes found</h3>
           <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
-            {searchQuery || selectedSubject !== 'all'
+            {searchQuery || selectedSubject !== 'all' || selectedTargetFilter !== 'all'
               ? 'No quizzes match your filter criteria.'
               : 'You have no upcoming quizzes scheduled for this batch!'}
           </p>
@@ -587,6 +843,7 @@ export default function QuizList({
           {filteredAndSortedQuizzes.map(quiz => {
             const isEditing = editingQuizId === quiz.id;
             const countdown = getCountdownBadge(quiz.date);
+            const targetBadge = getTargetBadge(quiz);
             const currentPrep = prepMap[quiz.id] || 'not_started';
 
             if (isEditing) {
@@ -623,7 +880,16 @@ export default function QuizList({
                         className="input-field text-xs"
                       />
                     </div>
-                    <div className="sm:col-span-4">
+                    <div className="sm:col-span-6">
+                      <input
+                        type="text"
+                        value={editTargetLabel}
+                        onChange={e => setEditTargetLabel(e.target.value)}
+                        placeholder="Target Batch (e.g. AI&DS Year 1 Only)"
+                        className="input-field text-xs"
+                      />
+                    </div>
+                    <div className="sm:col-span-6">
                       <input
                         type="date"
                         value={editDate}
@@ -631,7 +897,7 @@ export default function QuizList({
                         className="input-field text-xs"
                       />
                     </div>
-                    <div className="sm:col-span-4">
+                    <div className="sm:col-span-6">
                       <input
                         type="text"
                         value={editTime}
@@ -640,7 +906,7 @@ export default function QuizList({
                         className="input-field text-xs"
                       />
                     </div>
-                    <div className="sm:col-span-4">
+                    <div className="sm:col-span-6">
                       <input
                         type="text"
                         value={editRoom}
@@ -683,9 +949,15 @@ export default function QuizList({
                 className="card p-5 sm:p-6 card-hover relative overflow-hidden transition-all duration-200 border-l-4 border-l-purple-500"
               >
                 <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-                  {/* Left: Info, Subject, Title, Topics */}
+                  {/* Left: Info, Subject, Target Batch, Title, Topics */}
                   <div className="space-y-2.5 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
+                      {/* Target Audience Badge */}
+                      <span className={`badge border text-[11px] font-bold ${targetBadge.color} flex items-center gap-1`}>
+                        <Target className="w-3 h-3 inline-block" />
+                        <span>{targetBadge.label}</span>
+                      </span>
+
                       {/* Countdown badge */}
                       <span className={`badge border text-xs ${countdown.color}`}>
                         <Clock className="w-3 h-3 mr-0.5 inline-block" />
