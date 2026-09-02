@@ -22,6 +22,7 @@ async function seed() {
 
   await Promise.all([
     db.collection('branches').deleteMany({}),
+    db.collection('batches').deleteMany({}),
     db.collection('users').deleteMany({}),
     db.collection('timetableentries').deleteMany({}),
     db.collection('assignments').deleteMany({}),
@@ -67,6 +68,34 @@ async function seed() {
   branchesData.forEach((branch, index) => {
     branchMap[branch.code] = branchDocs.insertedIds[index];
   });
+
+  // ============================================================
+  // 1.1 ACADEMIC BATCHES COLLECTION
+  // ============================================================
+  console.log('📚 Seeding official academic batches...');
+
+  const batchesData = [
+    // CSE Batches (Section A)
+    { branchId: branchMap['CSE'], year: 1, section: 'A', programme: 'B.Tech & iMTech', name: 'CSE Year 1 (Section A)', isActive: true, createdAt: new Date() },
+    { branchId: branchMap['CSE'], year: 2, section: 'A', programme: 'B.Tech & iMTech', name: 'CSE Year 2 (Section A)', isActive: true, createdAt: new Date() },
+    { branchId: branchMap['CSE'], year: 3, section: 'A', programme: 'B.Tech & iMTech', name: 'CSE Year 3 (Section A)', isActive: true, createdAt: new Date() },
+    { branchId: branchMap['CSE'], year: 4, section: 'A', programme: 'iMTech Only', name: 'CSE Year 4 (Section A - iMTech)', isActive: true, createdAt: new Date() },
+    { branchId: branchMap['CSE'], year: 5, section: 'A', programme: 'iMTech Only', name: 'CSE Year 5 (Section A - iMTech)', isActive: true, createdAt: new Date() },
+
+    // ECE Batches (Section B)
+    { branchId: branchMap['ECE'], year: 1, section: 'B', programme: 'B.Tech & iMTech', name: 'ECE Year 1 (Section B)', isActive: true, createdAt: new Date() },
+    { branchId: branchMap['ECE'], year: 2, section: 'B', programme: 'B.Tech & iMTech', name: 'ECE Year 2 (Section B)', isActive: true, createdAt: new Date() },
+    { branchId: branchMap['ECE'], year: 3, section: 'B', programme: 'B.Tech & iMTech', name: 'ECE Year 3 (Section B)', isActive: true, createdAt: new Date() },
+    { branchId: branchMap['ECE'], year: 4, section: 'B', programme: 'iMTech Only', name: 'ECE Year 4 (Section B - iMTech)', isActive: true, createdAt: new Date() },
+    { branchId: branchMap['ECE'], year: 5, section: 'B', programme: 'iMTech Only', name: 'ECE Year 5 (Section B - iMTech)', isActive: true, createdAt: new Date() },
+
+    // AI&DS Batches (Section B, Years 1-3 only)
+    { branchId: branchMap['AI&DS'], year: 1, section: 'B', programme: 'B.Tech Only', name: 'AI&DS Year 1 (Section B)', isActive: true, createdAt: new Date() },
+    { branchId: branchMap['AI&DS'], year: 2, section: 'B', programme: 'B.Tech Only', name: 'AI&DS Year 2 (Section B)', isActive: true, createdAt: new Date() },
+    { branchId: branchMap['AI&DS'], year: 3, section: 'B', programme: 'B.Tech Only', name: 'AI&DS Year 3 (Section B)', isActive: true, createdAt: new Date() },
+  ];
+
+  await db.collection('batches').insertMany(batchesData);
 
   // ============================================================
   // 2. USERS

@@ -73,6 +73,19 @@ interface Assignment {
   status: string;
 }
 
+interface BatchItem {
+  id: string;
+  _id?: string;
+  branchId: string;
+  branchCode: string;
+  branchName: string;
+  year: number;
+  section: string;
+  programme: string;
+  name: string;
+  isActive: boolean;
+}
+
 interface Stats {
   totalStudents: number;
   totalAssignments: number;
@@ -85,6 +98,7 @@ const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
 export default function AdminPage() {
   const [user, setUser] = useState<User | null>(null);
   const [branches, setBranches] = useState<Branch[]>([]);
+  const [batches, setBatches] = useState<BatchItem[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'timetable' | 'assignments' | 'users'>('overview');
   const [loading, setLoading] = useState(true);
@@ -147,6 +161,14 @@ export default function AdminPage() {
     } catch {}
   }, []);
 
+  const fetchBatches = useCallback(async () => {
+    try {
+      const res = await fetch('/api/batches');
+      const data = await res.json();
+      if (data.batches) setBatches(data.batches);
+    } catch {}
+  }, []);
+
   const fetchTimetable = useCallback(async (bId: string, y: number, s: string) => {
     if (!bId) return;
     setLoadingItems(true);
@@ -173,7 +195,8 @@ export default function AdminPage() {
     Promise.all([
       fetch('/api/auth/me').then(r => r.json()),
       fetch('/api/branches').then(r => r.json()),
-    ]).then(([userData, branchData]) => {
+      fetch('/api/batches').then(r => r.json()),
+    ]).then(([userData, branchData, batchData]) => {
       if (!userData.user || (userData.user.role !== 'admin' && userData.user.role !== 'superadmin')) {
         router.push('/login');
         return;
@@ -181,6 +204,8 @@ export default function AdminPage() {
       setUser(userData.user);
       const bList = branchData.branches || [];
       setBranches(bList);
+      const batchList = batchData.batches || [];
+      setBatches(batchList);
 
       const defaultBranch = userData.user.role === 'admin' && userData.user.branchId
         ? String(userData.user.branchId)
@@ -192,8 +217,8 @@ export default function AdminPage() {
 
       fetchStats();
       if (defaultBranch) {
-        fetchTimetable(defaultBranch, 2, 'A');
-        fetchAssignments(defaultBranch, 2);
+        fetchTimetable(defaultBranch, 1, 'A');
+        fetchAssignments(defaultBranch, 1);
       }
       if (userData.user.role === 'superadmin') {
         fetchUsers();
@@ -204,20 +229,92 @@ export default function AdminPage() {
     });
   }, [router, fetchStats, fetchUsers, fetchTimetable, fetchAssignments]);
 
+  const getBranchCode = (bId: string) => {
+    const b = branches.find(item => String(item.id || item._id) === String(bId));
+    return b ? b.code : '';
+  };
+
+  // Dynamically query database batches for allowed years
+  const getAllowedYears = (bId: string) => {
+    const branchBatches = batches.filter(
+      b => String(b.branchId) === String(bId) && b.isActive !== false
+    );
+    if (branchBatches.length > 0) {
+      const yearMap = new Map<number, string>();
+      branchBatches.forEach(b => {
+        if (!yearMap.has(b.year)) {
+          yearMap.set(b.year, `Year ${b.year} (${b.programme})`);
+        }
+      });
+      return Array.from(yearMap.entries())
+        .sort(([y1], [y2]) => y1 - y2)
+        .map(([value, label]) => ({ value, label }));
+    }
+
+    const code = getBranchCode(bId);
+    if (code === 'AI&DS') {
+      return [
+        { value: 1, label: 'Year 1 (B.Tech)' },
+        { value: 2, label: 'Year 2 (B.Tech)' },
+        { value: 3, label: 'Year 3 (B.Tech)' },
+      ];
+    }
+    return [
+      { value: 1, label: 'Year 1 (B.Tech & iMTech)' },
+      { value: 2, label: 'Year 2 (B.Tech & iMTech)' },
+      { value: 3, label: 'Year 3 (B.Tech & iMTech)' },
+      { value: 4, label: 'Year 4 (iMTech Only)' },
+      { value: 5, label: 'Year 5 (iMTech Only)' },
+    ];
+  };
+
+  // Dynamically query database batches for allowed sections
+  const getAllowedSections = (bId: string, targetYear?: number) => {
+    const branchBatches = batches.filter(
+      b =>
+        String(b.branchId) === String(bId) &&
+        b.isActive !== false &&
+        (targetYear ? b.year === targetYear : true)
+    );
+    if (branchBatches.length > 0) {
+      const secMap = new Map<string, string>();
+      branchBatches.forEach(b => {
+        if (!secMap.has(b.section)) {
+          secMap.set(b.section, `Section ${b.section} (${b.branchCode || getBranchCode(bId)})`);
+        }
+      });
+      return Array.from(secMap.entries()).map(([value, label]) => ({ value, label }));
+    }
+
+    const code = getBranchCode(bId);
+    if (code === 'CSE') {
+      return [{ value: 'A', label: 'Section A (CSE)' }];
+    }
+    return [{ value: 'B', label: 'Section B (ECE & AI&DS)' }];
+  };
+
   const handleBranchChange = (bId: string) => {
     setMgmtBranchId(bId);
     setTtBranchId(bId);
     setAsBranchId(bId);
-    const sel = branches.find(b => String(b.id || b._id) === String(bId));
-    let newSec = mgmtSection;
-    if (sel) {
-      if (sel.code === 'CSE') newSec = 'A';
-      else if (sel.code === 'ECE' || sel.code === 'AI&DS') newSec = 'B';
-      setMgmtSection(newSec);
-      setTtSection(newSec);
+    
+    const allowedY = getAllowedYears(bId);
+    let newYear = mgmtYear;
+    if (!allowedY.some(y => y.value === newYear)) {
+      newYear = allowedY[0]?.value || 1;
+      setMgmtYear(newYear);
+      setTtYear(newYear);
+      setAsYear(newYear);
     }
-    fetchTimetable(bId, mgmtYear, newSec);
-    fetchAssignments(bId, mgmtYear);
+
+    const allowedS = getAllowedSections(bId, newYear);
+    let newSec = allowedS[0]?.value || (getBranchCode(bId) === 'CSE' ? 'A' : 'B');
+    setMgmtSection(newSec);
+    setTtSection(newSec);
+    setAsSection(newSec);
+
+    fetchTimetable(bId, newYear, newSec);
+    fetchAssignments(bId, newYear);
   };
 
   const handleYearChange = (y: number) => {
@@ -569,6 +666,41 @@ export default function AdminPage() {
                 </button>
               </div>
             </div>
+
+            {/* Database Batches Grid */}
+            <div className="card p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-base font-semibold text-slate-900">
+                    🏛️ Active Academic Batches (Database)
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Officially configured batches queried live from MongoDB
+                  </p>
+                </div>
+                <span className="badge badge-lecture text-xs">
+                  {batches.length} Active Batches
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {batches.map(b => (
+                  <div
+                    key={b.id || b._id}
+                    className="p-3.5 rounded-xl border border-slate-200/80 bg-slate-50/50 hover:bg-white hover:border-slate-300 transition-all space-y-1"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-slate-900 text-xs">{b.branchCode} • Year {b.year}</span>
+                      <span className="badge badge-lab text-[10px]">Sec {b.section}</span>
+                    </div>
+                    <p className="text-[11px] text-slate-600 font-medium">{b.name}</p>
+                    <span className="inline-block text-[10px] text-slate-400 font-mono">
+                      {b.programme}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         )}
 
@@ -598,24 +730,23 @@ export default function AdminPage() {
                 <select
                   value={mgmtYear}
                   onChange={e => handleYearChange(parseInt(e.target.value))}
-                  className="select-field text-xs py-2 w-32"
+                  className="select-field text-xs py-2 min-w-[160px]"
                 >
-                  {[1, 2, 3, 4, 5].map(y => (
-                    <option key={y} value={y}>Year {y} / Batch {y}</option>
+                  {getAllowedYears(mgmtBranchId).map(y => (
+                    <option key={y.value} value={y.value}>{y.label}</option>
                   ))}
                 </select>
 
-                {/* Section Input / Selector */}
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs text-slate-500 font-medium">Sec:</span>
-                  <input
-                    type="text"
-                    value={mgmtSection}
-                    onChange={e => handleSectionChange(e.target.value.toUpperCase())}
-                    placeholder="A"
-                    className="input-field text-xs py-1.5 px-2.5 w-20 text-center font-bold"
-                  />
-                </div>
+                {/* Section Selector */}
+                <select
+                  value={mgmtSection}
+                  onChange={e => handleSectionChange(e.target.value)}
+                  className="select-field text-xs py-2 min-w-[150px]"
+                >
+                  {getAllowedSections(mgmtBranchId).map(s => (
+                    <option key={s.value} value={s.value}>{s.label}</option>
+                  ))}
+                </select>
               </div>
 
               <button
@@ -754,10 +885,20 @@ export default function AdminPage() {
                 <select
                   value={mgmtYear}
                   onChange={e => handleYearChange(parseInt(e.target.value))}
-                  className="select-field text-xs py-2 w-32"
+                  className="select-field text-xs py-2 min-w-[160px]"
                 >
-                  {[1, 2, 3, 4, 5].map(y => (
-                    <option key={y} value={y}>Year {y} / Batch {y}</option>
+                  {getAllowedYears(mgmtBranchId).map(y => (
+                    <option key={y.value} value={y.value}>{y.label}</option>
+                  ))}
+                </select>
+
+                <select
+                  value={mgmtSection}
+                  onChange={e => handleSectionChange(e.target.value)}
+                  className="select-field text-xs py-2 min-w-[150px]"
+                >
+                  {getAllowedSections(mgmtBranchId).map(s => (
+                    <option key={s.value} value={s.value}>{s.label}</option>
                   ))}
                 </select>
               </div>
@@ -941,7 +1082,13 @@ export default function AdminPage() {
                   <label className="block font-medium text-slate-700 mb-1">Branch</label>
                   <select
                     value={ttBranchId}
-                    onChange={e => setTtBranchId(e.target.value)}
+                    onChange={e => {
+                      const bId = e.target.value;
+                      setTtBranchId(bId);
+                      const code = getBranchCode(bId);
+                      if (code === 'AI&DS' && ttYear > 3) setTtYear(1);
+                      setTtSection(code === 'CSE' ? 'A' : 'B');
+                    }}
                     className="select-field text-xs"
                     required
                   >
@@ -959,19 +1106,19 @@ export default function AdminPage() {
                       onChange={e => setTtYear(parseInt(e.target.value))}
                       className="select-field text-xs"
                     >
-                      {[1, 2, 3, 4, 5].map(y => <option key={y} value={y}>Year {y}</option>)}
+                      {getAllowedYears(ttBranchId).map(y => <option key={y.value} value={y.value}>{y.label}</option>)}
                     </select>
                   </div>
                   <div>
                     <label className="block font-medium text-slate-700 mb-1">Section</label>
-                    <input
-                      type="text"
+                    <select
                       value={ttSection}
-                      onChange={e => setTtSection(e.target.value.toUpperCase())}
-                      placeholder="A"
-                      className="input-field text-xs font-bold text-center"
+                      onChange={e => setTtSection(e.target.value)}
+                      className="select-field text-xs"
                       required
-                    />
+                    >
+                      {getAllowedSections(ttBranchId).map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                    </select>
                   </div>
                 </div>
               </div>
@@ -1105,7 +1252,13 @@ export default function AdminPage() {
                   <label className="block font-medium text-slate-700 mb-1">Branch</label>
                   <select
                     value={asBranchId}
-                    onChange={e => setAsBranchId(e.target.value)}
+                    onChange={e => {
+                      const bId = e.target.value;
+                      setAsBranchId(bId);
+                      const code = getBranchCode(bId);
+                      if (code === 'AI&DS' && asYear > 3) setAsYear(1);
+                      setAsSection(code === 'CSE' ? 'A' : 'B');
+                    }}
                     className="select-field text-xs"
                     required
                   >
@@ -1123,18 +1276,18 @@ export default function AdminPage() {
                       onChange={e => setAsYear(parseInt(e.target.value))}
                       className="select-field text-xs"
                     >
-                      {[1, 2, 3, 4, 5].map(y => <option key={y} value={y}>Year {y}</option>)}
+                      {getAllowedYears(asBranchId).map(y => <option key={y.value} value={y.value}>{y.label}</option>)}
                     </select>
                   </div>
                   <div>
                     <label className="block font-medium text-slate-700 mb-1">Section</label>
-                    <input
-                      type="text"
+                    <select
                       value={asSection}
-                      onChange={e => setAsSection(e.target.value.toUpperCase())}
-                      placeholder="All / A"
-                      className="input-field text-xs font-bold text-center"
-                    />
+                      onChange={e => setAsSection(e.target.value)}
+                      className="select-field text-xs"
+                    >
+                      {getAllowedSections(asBranchId).map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                    </select>
                   </div>
                 </div>
               </div>

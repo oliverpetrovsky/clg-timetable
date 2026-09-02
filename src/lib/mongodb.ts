@@ -59,7 +59,7 @@ export async function connectToDatabase(): Promise<typeof mongoose> {
 
 // Auto seed helper when deploying to a fresh MongoDB cluster
 async function seedDefaultDataIfEmpty(mongooseInstance: typeof mongoose) {
-  const { Branch, User } = await import('./models');
+  const { Branch, Batch, User } = await import('./models');
   const bcrypt = await import('bcryptjs');
 
   const branchCount = await Branch.countDocuments();
@@ -84,6 +84,37 @@ async function seedDefaultDataIfEmpty(mongooseInstance: typeof mongoose) {
     ]);
   }
 
+  // Ensure department admins & branch objects
+  const cseBranch = await Branch.findOne({ code: 'CSE' });
+  const eceBranch = await Branch.findOne({ code: 'ECE' });
+  const aidsBranch = await Branch.findOne({ code: 'AI&DS' });
+
+  // Seed academic batches collection if empty
+  const batchCount = await Batch.countDocuments();
+  if (batchCount === 0 && cseBranch && eceBranch && aidsBranch) {
+    console.log('🌱 Seeding IIIT-B academic batches collection...');
+    await Batch.create([
+      // CSE Batches (Section A)
+      { branchId: cseBranch._id, year: 1, section: 'A', programme: 'B.Tech & iMTech', name: 'CSE Year 1 (Section A)' },
+      { branchId: cseBranch._id, year: 2, section: 'A', programme: 'B.Tech & iMTech', name: 'CSE Year 2 (Section A)' },
+      { branchId: cseBranch._id, year: 3, section: 'A', programme: 'B.Tech & iMTech', name: 'CSE Year 3 (Section A)' },
+      { branchId: cseBranch._id, year: 4, section: 'A', programme: 'iMTech Only', name: 'CSE Year 4 (Section A - iMTech)' },
+      { branchId: cseBranch._id, year: 5, section: 'A', programme: 'iMTech Only', name: 'CSE Year 5 (Section A - iMTech)' },
+
+      // ECE Batches (Section B)
+      { branchId: eceBranch._id, year: 1, section: 'B', programme: 'B.Tech & iMTech', name: 'ECE Year 1 (Section B)' },
+      { branchId: eceBranch._id, year: 2, section: 'B', programme: 'B.Tech & iMTech', name: 'ECE Year 2 (Section B)' },
+      { branchId: eceBranch._id, year: 3, section: 'B', programme: 'B.Tech & iMTech', name: 'ECE Year 3 (Section B)' },
+      { branchId: eceBranch._id, year: 4, section: 'B', programme: 'iMTech Only', name: 'ECE Year 4 (Section B - iMTech)' },
+      { branchId: eceBranch._id, year: 5, section: 'B', programme: 'iMTech Only', name: 'ECE Year 5 (Section B - iMTech)' },
+
+      // AI&DS Batches (Section B, Years 1-3 only)
+      { branchId: aidsBranch._id, year: 1, section: 'B', programme: 'B.Tech Only', name: 'AI&DS Year 1 (Section B)' },
+      { branchId: aidsBranch._id, year: 2, section: 'B', programme: 'B.Tech Only', name: 'AI&DS Year 2 (Section B)' },
+      { branchId: aidsBranch._id, year: 3, section: 'B', programme: 'B.Tech Only', name: 'AI&DS Year 3 (Section B)' },
+    ]);
+  }
+
   // Seed / ensure IIIT-B class rep superadmin account
   const classRepAdmin = await User.findOne({ email: 'classreps@iiitb.ac.in' });
   if (!classRepAdmin) {
@@ -97,10 +128,6 @@ async function seedDefaultDataIfEmpty(mongooseInstance: typeof mongoose) {
     });
   }
 
-  // Ensure department admins
-  const cseBranch = await Branch.findOne({ code: 'CSE' });
-  const eceBranch = await Branch.findOne({ code: 'ECE' });
-  const aidsBranch = await Branch.findOne({ code: 'AI&DS' });
   const branchAdminHash = await bcrypt.hash('branch123', 12);
 
   if (cseBranch && !(await User.findOne({ email: 'cse.admin@iiitb.ac.in' }))) {

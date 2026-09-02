@@ -101,13 +101,18 @@ export default function TimetableView({
 
   const [activeDay, setActiveDay] = useState(currentDayIndex > 5 ? 0 : currentDayIndex);
 
+  const [batches, setBatches] = useState<any[]>([]);
+
   // Load saved preference from cookie / localStorage on mount
   useEffect(() => {
-    fetch('/api/branches')
-      .then(res => res.json())
-      .then(data => {
-        const list = data.branches || [];
+    Promise.all([
+      fetch('/api/branches').then(r => r.json()),
+      fetch('/api/batches').then(r => r.json()),
+    ])
+      .then(([branchData, batchData]) => {
+        const list = branchData.branches || [];
         setBranches(list);
+        setBatches(batchData.batches || []);
 
         if (!initialBranchId && list.length > 0) {
           try {
@@ -142,19 +147,86 @@ export default function TimetableView({
     } catch {}
   };
 
+  const getBranchCode = (bId: string) => {
+    const b = branches.find(item => String(item.id || (item as any)._id) === String(bId));
+    return b ? b.code : '';
+  };
+
+  const getAllowedYears = (bId: string) => {
+    const branchBatches = batches.filter(
+      b => String(b.branchId) === String(bId) && b.isActive !== false
+    );
+    if (branchBatches.length > 0) {
+      const yearMap = new Map<number, string>();
+      branchBatches.forEach(b => {
+        if (!yearMap.has(b.year)) {
+          yearMap.set(b.year, `Year ${b.year} (${b.programme})`);
+        }
+      });
+      return Array.from(yearMap.entries())
+        .sort(([y1], [y2]) => y1 - y2)
+        .map(([value, label]) => ({ value, label }));
+    }
+
+    const code = getBranchCode(bId);
+    if (code === 'AI&DS') {
+      return [
+        { value: 1, label: 'Year 1' },
+        { value: 2, label: 'Year 2' },
+        { value: 3, label: 'Year 3' },
+      ];
+    }
+    return [
+      { value: 1, label: 'Year 1' },
+      { value: 2, label: 'Year 2' },
+      { value: 3, label: 'Year 3' },
+      { value: 4, label: 'Year 4 (iMTech)' },
+      { value: 5, label: 'Year 5 (iMTech)' },
+    ];
+  };
+
+  const getAllowedSections = (bId: string, targetYear?: number) => {
+    const branchBatches = batches.filter(
+      b =>
+        String(b.branchId) === String(bId) &&
+        b.isActive !== false &&
+        (targetYear ? b.year === targetYear : true)
+    );
+    if (branchBatches.length > 0) {
+      const secMap = new Map<string, string>();
+      branchBatches.forEach(b => {
+        if (!secMap.has(b.section)) {
+          secMap.set(b.section, `Section ${b.section} (${b.branchCode || getBranchCode(bId)})`);
+        }
+      });
+      return Array.from(secMap.entries()).map(([value, label]) => ({ value, label }));
+    }
+
+    const code = getBranchCode(bId);
+    if (code === 'CSE') {
+      return [{ value: 'A', label: 'Section A (CSE)' }];
+    }
+    return [{ value: 'B', label: 'Section B (ECE & AI&DS)' }];
+  };
+
   const handleBranchChange = (newBranchId: string) => {
     setBranchId(newBranchId);
     const selectedBranch = branches.find(b => String(b.id || (b as any)._id) === String(newBranchId));
     let newSection = section;
+    let newYear = year;
     if (selectedBranch) {
       if (selectedBranch.code === 'CSE') {
         newSection = 'A';
       } else if (selectedBranch.code === 'ECE' || selectedBranch.code === 'AI&DS') {
         newSection = 'B';
       }
+      if (selectedBranch.code === 'AI&DS' && newYear > 3) {
+        newYear = 1;
+        setYear(1);
+      }
       setSection(newSection);
     }
-    savePreferenceCookie(newBranchId, year, newSection);
+    savePreferenceCookie(newBranchId, newYear, newSection);
   };
 
   const handleYearChange = (newYear: number) => {
@@ -251,23 +323,22 @@ export default function TimetableView({
             <select
               value={year}
               onChange={e => handleYearChange(parseInt(e.target.value))}
-              className="select-field text-xs py-2 w-32"
+              className="select-field text-xs py-2 min-w-[140px]"
             >
-              <option value={1}>Year 1</option>
-              <option value={2}>Year 2</option>
-              <option value={3}>Year 3</option>
-              <option value={4}>Year 4 (iMTech)</option>
-              <option value={5}>Year 5 (iMTech)</option>
+              {getAllowedYears(branchId).map(y => (
+                <option key={y.value} value={y.value}>{y.label}</option>
+              ))}
             </select>
 
             {/* Section Select */}
             <select
               value={section}
               onChange={e => handleSectionChange(e.target.value)}
-              className="select-field text-xs py-2 min-w-[140px]"
+              className="select-field text-xs py-2 min-w-[150px]"
             >
-              <option value="A">Section A (CSE)</option>
-              <option value="B">Section B (ECE & AI&DS)</option>
+              {getAllowedSections(branchId).map(s => (
+                <option key={s.value} value={s.value}>{s.label}</option>
+              ))}
             </select>
 
             {hasSavedPref && (

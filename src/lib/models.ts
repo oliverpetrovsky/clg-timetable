@@ -160,10 +160,38 @@ const NotificationSchema = new Schema<INotification>(
   { timestamps: false }
 );
 
+// ================= BATCH =================
+export interface IBatch extends Document {
+  branchId: mongoose.Types.ObjectId;
+  year: number;
+  section: string;
+  programme: string;
+  name: string;
+  isActive: boolean;
+  createdAt: Date;
+}
+
+const BatchSchema = new Schema<IBatch>(
+  {
+    branchId: { type: Schema.Types.ObjectId, ref: 'Branch', required: true, index: true },
+    year: { type: Number, required: true },
+    section: { type: String, required: true, uppercase: true },
+    programme: { type: String, required: true },
+    name: { type: String, required: true },
+    isActive: { type: Boolean, default: true },
+    createdAt: { type: Date, default: Date.now },
+  },
+  { timestamps: false }
+);
+
+BatchSchema.index({ branchId: 1, year: 1, section: 1 }, { unique: true });
+
 // Prevent re-compilation in development HMR
 export const Branch: Model<IBranch> = mongoose.models.Branch || mongoose.model<IBranch>('Branch', BranchSchema);
+export const Batch: Model<IBatch> = mongoose.models.Batch || mongoose.model<IBatch>('Batch', BatchSchema);
 export const User: Model<IUser> = mongoose.models.User || mongoose.model<IUser>('User', UserSchema);
 export const TimetableEntry: Model<ITimetableEntry> = mongoose.models.TimetableEntry || mongoose.model<ITimetableEntry>('TimetableEntry', TimetableEntrySchema);
 export const Assignment: Model<IAssignment> = mongoose.models.Assignment || mongoose.model<IAssignment>('Assignment', AssignmentSchema);
 export const AssignmentTracking: Model<IAssignmentTracking> = mongoose.models.AssignmentTracking || mongoose.model<IAssignmentTracking>('AssignmentTracking', AssignmentTrackingSchema);
 export const Notification: Model<INotification> = mongoose.models.Notification || mongoose.model<INotification>('Notification', NotificationSchema);
+

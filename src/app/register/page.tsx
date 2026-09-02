@@ -33,16 +33,20 @@ export default function RegisterPage() {
   const [year, setYear] = useState(1);
   const [section, setSection] = useState('A');
   const [branches, setBranches] = useState<Branch[]>([]);
+  const [batches, setBatches] = useState<any[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
-    fetch('/api/branches')
-      .then(res => res.json())
-      .then(data => {
-        const list = data.branches || [];
+    Promise.all([
+      fetch('/api/branches').then(r => r.json()),
+      fetch('/api/batches').then(r => r.json()),
+    ])
+      .then(([branchData, batchData]) => {
+        const list = branchData.branches || [];
         setBranches(list);
+        setBatches(batchData.batches || []);
         if (list.length > 0) {
           setBranchId(String(list[0].id || list[0]._id));
         }
@@ -81,6 +85,68 @@ export default function RegisterPage() {
       setError('Network error occurred. Please try again.');
       setLoading(false);
     }
+  };
+
+  const getBranchCode = (bId: string) => {
+    const b = branches.find(item => String(item.id || item._id) === String(bId));
+    return b ? b.code : '';
+  };
+
+  const getAllowedYears = (bId: string) => {
+    const branchBatches = batches.filter(
+      b => String(b.branchId) === String(bId) && b.isActive !== false
+    );
+    if (branchBatches.length > 0) {
+      const yearMap = new Map<number, string>();
+      branchBatches.forEach(b => {
+        if (!yearMap.has(b.year)) {
+          yearMap.set(b.year, `Year ${b.year} (${b.programme})`);
+        }
+      });
+      return Array.from(yearMap.entries())
+        .sort(([y1], [y2]) => y1 - y2)
+        .map(([value, label]) => ({ value, label }));
+    }
+
+    const code = getBranchCode(bId);
+    if (code === 'AI&DS') {
+      return [
+        { value: 1, label: 'Year 1 (B.Tech)' },
+        { value: 2, label: 'Year 2 (B.Tech)' },
+        { value: 3, label: 'Year 3 (B.Tech)' },
+      ];
+    }
+    return [
+      { value: 1, label: 'Year 1 (B.Tech & iMTech)' },
+      { value: 2, label: 'Year 2 (B.Tech & iMTech)' },
+      { value: 3, label: 'Year 3 (B.Tech & iMTech)' },
+      { value: 4, label: 'Year 4 (iMTech Only)' },
+      { value: 5, label: 'Year 5 (iMTech Only)' },
+    ];
+  };
+
+  const getAllowedSections = (bId: string, targetYear?: number) => {
+    const branchBatches = batches.filter(
+      b =>
+        String(b.branchId) === String(bId) &&
+        b.isActive !== false &&
+        (targetYear ? b.year === targetYear : true)
+    );
+    if (branchBatches.length > 0) {
+      const secMap = new Map<string, string>();
+      branchBatches.forEach(b => {
+        if (!secMap.has(b.section)) {
+          secMap.set(b.section, `Section ${b.section} (${b.branchCode || getBranchCode(bId)})`);
+        }
+      });
+      return Array.from(secMap.entries()).map(([value, label]) => ({ value, label }));
+    }
+
+    const code = getBranchCode(bId);
+    if (code === 'CSE') {
+      return [{ value: 'A', label: 'Section A (CSE)' }];
+    }
+    return [{ value: 'B', label: 'Section B (ECE & AI&DS)' }];
   };
 
   return (
@@ -181,11 +247,10 @@ export default function RegisterPage() {
                   onChange={e => {
                     const newBranchId = e.target.value;
                     setBranchId(newBranchId);
-                    const sel = branches.find(b => String(b.id || b._id) === String(newBranchId));
-                    if (sel) {
-                      if (sel.code === 'CSE') setSection('A');
-                      else if (sel.code === 'ECE' || sel.code === 'AI&DS') setSection('B');
-                    }
+                    const code = getBranchCode(newBranchId);
+                    if (code === 'CSE') setSection('A');
+                    else if (code === 'ECE' || code === 'AI&DS') setSection('B');
+                    if (code === 'AI&DS' && year > 3) setYear(1);
                   }}
                   className="select-field pl-10 text-xs"
                   required
@@ -209,11 +274,9 @@ export default function RegisterPage() {
                   onChange={e => setYear(parseInt(e.target.value))}
                   className="select-field text-xs"
                 >
-                  <option value={1}>Year 1</option>
-                  <option value={2}>Year 2</option>
-                  <option value={3}>Year 3</option>
-                  <option value={4}>Year 4 (iMTech)</option>
-                  <option value={5}>Year 5 (iMTech)</option>
+                  {getAllowedYears(branchId).map(y => (
+                    <option key={y.value} value={y.value}>{y.label}</option>
+                  ))}
                 </select>
               </div>
 
@@ -224,8 +287,9 @@ export default function RegisterPage() {
                   onChange={e => setSection(e.target.value)}
                   className="select-field text-xs"
                 >
-                  <option value="A">Section A (CSE)</option>
-                  <option value="B">Section B (ECE & AI&DS)</option>
+                  {getAllowedSections(branchId).map(s => (
+                    <option key={s.value} value={s.value}>{s.label}</option>
+                  ))}
                 </select>
               </div>
             </div>
