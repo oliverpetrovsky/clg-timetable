@@ -173,12 +173,20 @@ export default function RegisterPage() {
 
             {/* Academic Branch */}
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1.5">Department / Branch</label>
+              <label className="block text-xs font-medium text-slate-700 mb-1.5">Department / Programme</label>
               <div className="relative">
                 <Building2 className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <select
                   value={branchId}
-                  onChange={e => setBranchId(e.target.value)}
+                  onChange={e => {
+                    const newBranchId = e.target.value;
+                    setBranchId(newBranchId);
+                    const sel = branches.find(b => String(b.id || b._id) === String(newBranchId));
+                    if (sel) {
+                      if (sel.code === 'CSE') setSection('A');
+                      else if (sel.code === 'ECE' || sel.code === 'AI&DS') setSection('B');
+                    }
+                  }}
                   className="select-field pl-10 text-xs"
                   required
                 >
@@ -201,9 +209,11 @@ export default function RegisterPage() {
                   onChange={e => setYear(parseInt(e.target.value))}
                   className="select-field text-xs"
                 >
-                  {[1, 2, 3, 4].map(y => (
-                    <option key={y} value={y}>Year {y}</option>
-                  ))}
+                  <option value={1}>Year 1</option>
+                  <option value={2}>Year 2</option>
+                  <option value={3}>Year 3</option>
+                  <option value={4}>Year 4 (iMTech)</option>
+                  <option value={5}>Year 5 (iMTech)</option>
                 </select>
               </div>
 
@@ -214,9 +224,8 @@ export default function RegisterPage() {
                   onChange={e => setSection(e.target.value)}
                   className="select-field text-xs"
                 >
-                  {['A', 'B', 'C', 'D'].map(s => (
-                    <option key={s} value={s}>Section {s}</option>
-                  ))}
+                  <option value="A">Section A (CSE)</option>
+                  <option value="B">Section B (ECE & AI&DS)</option>
                 </select>
               </div>
             </div>

@@ -30,30 +30,34 @@ async function seed() {
   ]);
 
   // ============================================================
-  // 1. BRANCHES
-  // IIIT-B currently offers B.Tech. in CSE, ECE and AI&DS.
+  // 1. BRANCHES & PROGRAMMES
+  // IIIT-B Academic Structure:
+  // - CSE:  iMTech (5-year) and B.Tech (4-year) -> Section A (Years 1–3)
+  // - ECE:  iMTech (5-year) and B.Tech (4-year) -> Section B (Years 1–3)
+  // - AI&DS: B.Tech (4-year only)               -> Section B (Years 1–3, grouped with ECE)
+  // - Years 4 & 5: iMTech only (CSE & ECE)
   // ============================================================
 
-  console.log('🏛️ Seeding IIIT-B branches...');
+  console.log('🏛️ Seeding IIIT-B branches & departments...');
 
   const branchesData = [
     {
       name: 'Computer Science & Engineering',
       code: 'CSE',
       description:
-        'B.Tech. in Computer Science and Engineering. The programme emphasizes programming, mathematics, theoretical computer science and computer systems.',
+        'B.Tech. & iMTech in Computer Science and Engineering. Assigned to Section A (Years 1–3), extending to 5-year iMTech programme.',
     },
     {
       name: 'Electronics & Communication Engineering',
       code: 'ECE',
       description:
-        'B.Tech. in Electronics & Communication Engineering. The programme combines programming, computer systems, electronics, communication, VLSI and embedded systems.',
+        'B.Tech. & iMTech in Electronics & Communication Engineering. Grouped with AI&DS in Section B (Years 1–3), extending to 5-year iMTech programme.',
     },
     {
       name: 'Artificial Intelligence & Data Science',
       code: 'AI&DS',
       description:
-        'B.Tech. in Artificial Intelligence & Data Science. The programme focuses on mathematics, statistics, data science, artificial intelligence and machine learning.',
+        'B.Tech. in Artificial Intelligence & Data Science. Grouped with ECE in Section B for foundational & interdisciplinary curriculum.',
     },
   ];
 
@@ -68,28 +72,25 @@ async function seed() {
   // 2. USERS
   // ============================================================
 
-  console.log('👥 Seeding users...');
-
-  // IMPORTANT:
-  // These are development/demo passwords.
-  // Use environment variables for production credentials.
+  console.log('👥 Seeding users & student distribution...');
 
   const iiitbAdminHash = await bcrypt.hash(
-    process.env.SEED_ADMIN_PASSWORD || 'change-me-admin',
+    process.env.SEED_ADMIN_PASSWORD || 'tbsm-naamsujal-vichaar-Vy0m',
     12
   );
 
   const studentHash = await bcrypt.hash(
-    process.env.SEED_STUDENT_PASSWORD || 'change-me-student',
+    process.env.SEED_STUDENT_PASSWORD || 'student123',
     12
   );
 
   const branchAdminHash = await bcrypt.hash(
-    process.env.SEED_BRANCH_PASSWORD || 'change-me-branch',
+    process.env.SEED_BRANCH_PASSWORD || 'branch123',
     12
   );
 
   const usersData = [
+    // Superadmin: Class Representatives Admin
     {
       name: 'IIIT-B Class Representatives Admin',
       email: 'classreps@iiitb.ac.in',
@@ -98,15 +99,7 @@ async function seed() {
       createdAt: new Date(),
     },
 
-    {
-      name: 'IIIT-B ECE Admin',
-      email: 'ece.admin@iiitb.ac.in',
-      passwordHash: branchAdminHash,
-      role: 'admin',
-      branchId: branchMap['ECE'],
-      createdAt: new Date(),
-    },
-
+    // Department Admins
     {
       name: 'IIIT-B CSE Admin',
       email: 'cse.admin@iiitb.ac.in',
@@ -115,7 +108,14 @@ async function seed() {
       branchId: branchMap['CSE'],
       createdAt: new Date(),
     },
-
+    {
+      name: 'IIIT-B ECE Admin',
+      email: 'ece.admin@iiitb.ac.in',
+      passwordHash: branchAdminHash,
+      role: 'admin',
+      branchId: branchMap['ECE'],
+      createdAt: new Date(),
+    },
     {
       name: 'IIIT-B AI&DS Admin',
       email: 'aids.admin@iiitb.ac.in',
@@ -125,21 +125,15 @@ async function seed() {
       createdAt: new Date(),
     },
 
-    // Demo student representing the 2026 ECE batch.
-    {
-      name: 'IIIT-B ECE Student',
-      email: 'student.ece@iiitb.ac.in',
-      passwordHash: studentHash,
-      role: 'student',
-      branchId: branchMap['ECE'],
-      year: 1,
-      section: 'A',
-      createdAt: new Date(),
-    },
+    // ------------------------------------------------------------
+    // STUDENTS: Distribution per IIIT-B rules:
+    // - Section A: CSE
+    // - Section B: ECE and AI&DS (grouped together)
+    // ------------------------------------------------------------
 
-    // Additional demo students.
+    // Year 1 Students
     {
-      name: 'IIIT-B CSE Student',
+      name: 'IIIT-B CSE Student (Sec A)',
       email: 'student.cse@iiitb.ac.in',
       passwordHash: studentHash,
       role: 'student',
@@ -148,39 +142,65 @@ async function seed() {
       section: 'A',
       createdAt: new Date(),
     },
-
     {
-      name: 'IIIT-B AI&DS Student',
+      name: 'IIIT-B ECE Student (Sec B)',
+      email: 'student.ece@iiitb.ac.in',
+      passwordHash: studentHash,
+      role: 'student',
+      branchId: branchMap['ECE'],
+      year: 1,
+      section: 'B',
+      createdAt: new Date(),
+    },
+    {
+      name: 'IIIT-B AI&DS Student (Sec B)',
       email: 'student.aids@iiitb.ac.in',
       passwordHash: studentHash,
       role: 'student',
       branchId: branchMap['AI&DS'],
       year: 1,
+      section: 'B',
+      createdAt: new Date(),
+    },
+
+    // Senior iMTech Students (Years 4 & 5 - iMTech only, no B.Tech)
+    {
+      name: 'IIIT-B iMTech CSE Senior',
+      email: 'imtech.cse@iiitb.ac.in',
+      passwordHash: studentHash,
+      role: 'student',
+      branchId: branchMap['CSE'],
+      year: 4,
       section: 'A',
+      createdAt: new Date(),
+    },
+    {
+      name: 'IIIT-B iMTech ECE Senior',
+      email: 'imtech.ece@iiitb.ac.in',
+      passwordHash: studentHash,
+      role: 'student',
+      branchId: branchMap['ECE'],
+      year: 4,
+      section: 'B',
       createdAt: new Date(),
     },
   ];
 
   const userDocs = await db.collection('users').insertMany(usersData);
-
   const classRepAdminId = userDocs.insertedIds[0];
 
   // ============================================================
   // 3. TIMETABLE
-  //
-  // IMPORTANT:
-  // IIIT-B publishes curriculum/course information publicly, but
-  // exact student timetables, rooms and faculty assignments should
-  // not be fabricated as official information.
-  //
-  // Therefore these are DEMO timetable entries using real
-  // curriculum course names.
+  // Distribution:
+  // - CSE: Section A
+  // - ECE & AI&DS: Section B (grouped together)
+  // - Years 1, 2, 3: B.Tech & iMTech
+  // - Years 4 & 5: iMTech only
   // ============================================================
 
-  console.log('📅 Seeding demo timetables...');
+  console.log('📅 Seeding timetables with Section A (CSE) and Section B (ECE & AI&DS)...');
 
   const now = new Date();
-
   const timetable = [];
 
   function addEntry(
@@ -214,673 +234,318 @@ async function seed() {
   }
 
   // ------------------------------------------------------------
-  // ECE YEAR 1
-  // Based on the 2026 ECE curriculum.
+  // SECTION A — CSE (YEAR 1)
   // ------------------------------------------------------------
 
   // Monday
-  addEntry(
-    'ECE',
-    1,
-    'A',
-    0,
-    '09:00',
-    '10:00',
-    'Mathematics – 1 (Calculus)'
-  );
-
-  addEntry(
-    'ECE',
-    1,
-    'A',
-    0,
-    '10:00',
-    '11:00',
-    'Programming IA (C)'
-  );
-
-  addEntry(
-    'ECE',
-    1,
-    'A',
-    0,
-    '11:15',
-    '12:15',
-    'Digital Design'
-  );
-
-  addEntry(
-    'ECE',
-    1,
-    'A',
-    0,
-    '13:30',
-    '14:30',
-    'English'
-  );
+  addEntry('CSE', 1, 'A', 0, '09:00', '10:00', 'Mathematics – 1 (Linear Algebra)', 'lecture', 'Dr. S. Raman', 'Aryabhata Hall');
+  addEntry('CSE', 1, 'A', 0, '10:00', '11:00', 'Programming 1A (C)', 'lecture', 'Dr. V. Sridhar', 'Aryabhata Hall');
+  addEntry('CSE', 1, 'A', 0, '11:15', '12:15', 'Digital Design', 'lecture', 'Dr. J. Biswas', 'Aryabhata Hall');
+  addEntry('CSE', 1, 'A', 0, '13:30', '14:30', 'Technical Communication', 'lecture', 'Prof. M. Sen', 'Hall 101');
 
   // Tuesday
-  addEntry(
-    'ECE',
-    1,
-    'A',
-    1,
-    '09:00',
-    '10:00',
-    'Mathematics – 2 (Linear Algebra)'
-  );
-
-  addEntry(
-    'ECE',
-    1,
-    'A',
-    1,
-    '10:00',
-    '11:00',
-    'Programming IB (Python)'
-  );
-
-  addEntry(
-    'ECE',
-    1,
-    'A',
-    1,
-    '11:15',
-    '12:15',
-    'Economics – 1'
-  );
-
-  addEntry(
-    'ECE',
-    1,
-    'A',
-    1,
-    '14:00',
-    '16:00',
-    'Programming Lab',
-    'lab'
-  );
+  addEntry('CSE', 1, 'A', 1, '09:00', '10:00', 'Mathematics – 2 (Probability & Statistics)', 'lecture', 'Dr. K. Rao', 'Aryabhata Hall');
+  addEntry('CSE', 1, 'A', 1, '10:00', '11:00', 'Programming 1B (Python)', 'lecture', 'Dr. V. Sridhar', 'Aryabhata Hall');
+  addEntry('CSE', 1, 'A', 1, '11:15', '12:15', 'Economics – 1', 'lecture', 'Dr. A. Verma', 'Hall 101');
+  addEntry('CSE', 1, 'A', 1, '14:00', '16:00', 'Programming Lab (C / Python)', 'lab', 'Lab Instructors', 'Computer Lab 1');
 
   // Wednesday
-  addEntry(
-    'ECE',
-    1,
-    'A',
-    2,
-    '09:00',
-    '10:00',
-    'Digital Design'
-  );
-
-  addEntry(
-    'ECE',
-    1,
-    'A',
-    2,
-    '10:00',
-    '11:00',
-    'Mathematics – 1 (Calculus)'
-  );
-
-  addEntry(
-    'ECE',
-    1,
-    'A',
-    2,
-    '11:15',
-    '12:15',
-    'Programming IA (C)'
-  );
-
-  addEntry(
-    'ECE',
-    1,
-    'A',
-    2,
-    '13:30',
-    '14:30',
-    'Physical Education 1',
-    'other'
-  );
+  addEntry('CSE', 1, 'A', 2, '09:00', '10:00', 'Digital Design', 'lecture', 'Dr. J. Biswas', 'Aryabhata Hall');
+  addEntry('CSE', 1, 'A', 2, '10:00', '11:00', 'Programming 1A (C)', 'lecture', 'Dr. V. Sridhar', 'Aryabhata Hall');
+  addEntry('CSE', 1, 'A', 2, '11:15', '12:15', 'Mathematics – 1 (Linear Algebra)', 'lecture', 'Dr. S. Raman', 'Aryabhata Hall');
+  addEntry('CSE', 1, 'A', 2, '14:00', '16:00', 'Digital Logic Design Lab', 'lab', 'Dr. J. Biswas', 'Hardware Lab');
 
   // Thursday
-  addEntry(
-    'ECE',
-    1,
-    'A',
-    3,
-    '09:00',
-    '10:00',
-    'Mathematics – 2 (Linear Algebra)'
-  );
-
-  addEntry(
-    'ECE',
-    1,
-    'A',
-    3,
-    '10:00',
-    '11:00',
-    'Programming IB (Python)'
-  );
-
-  addEntry(
-    'ECE',
-    1,
-    'A',
-    3,
-    '11:15',
-    '12:15',
-    'Digital Design'
-  );
+  addEntry('CSE', 1, 'A', 3, '09:00', '10:00', 'Programming 1B (Python)', 'lecture', 'Dr. V. Sridhar', 'Aryabhata Hall');
+  addEntry('CSE', 1, 'A', 3, '10:00', '11:00', 'Mathematics – 2 (Probability & Statistics)', 'lecture', 'Dr. K. Rao', 'Aryabhata Hall');
+  addEntry('CSE', 1, 'A', 3, '11:15', '12:15', 'Digital Design', 'lecture', 'Dr. J. Biswas', 'Aryabhata Hall');
 
   // Friday
-  addEntry(
-    'ECE',
-    1,
-    'A',
-    4,
-    '09:00',
-    '10:00',
-    'Economics – 1'
-  );
-
-  addEntry(
-    'ECE',
-    1,
-    'A',
-    4,
-    '10:00',
-    '11:00',
-    'English'
-  );
-
-  addEntry(
-    'ECE',
-    1,
-    'A',
-    4,
-    '11:15',
-    '12:15',
-    'Programming IA (C)'
-  );
+  addEntry('CSE', 1, 'A', 4, '09:00', '10:00', 'Economics – 1', 'lecture', 'Dr. A. Verma', 'Hall 101');
+  addEntry('CSE', 1, 'A', 4, '10:00', '11:00', 'Technical Communication', 'lecture', 'Prof. M. Sen', 'Hall 101');
+  addEntry('CSE', 1, 'A', 4, '11:15', '12:15', 'Problem Solving & Tutorial', 'tutorial', 'Teaching Assistants', 'Aryabhata Hall');
 
   // ------------------------------------------------------------
-  // CSE YEAR 1
-  // Based on IIIT-B's published CSE curriculum.
+  // SECTION B — ECE & AI&DS (YEAR 1)
+  // Shared foundational curriculum grouped in Section B
   // ------------------------------------------------------------
 
-  addEntry(
-    'CSE',
-    1,
-    'A',
-    0,
-    '09:00',
-    '10:00',
-    'Mathematics – 1 (Linear Algebra)'
-  );
+  // ECE Year 1 - Section B
+  addEntry('ECE', 1, 'B', 0, '09:00', '10:00', 'Mathematics – 1 (Calculus)', 'lecture', 'Dr. R. Sharma', 'Ramanujan Hall');
+  addEntry('ECE', 1, 'B', 0, '10:00', '11:00', 'Programming IA (C)', 'lecture', 'Dr. N. Murthy', 'Ramanujan Hall');
+  addEntry('ECE', 1, 'B', 0, '11:15', '12:15', 'Digital Design', 'lecture', 'Dr. M. Roy', 'Ramanujan Hall');
+  addEntry('ECE', 1, 'B', 0, '13:30', '14:30', 'Technical English', 'lecture', 'Prof. M. Sen', 'Hall 102');
 
-  addEntry(
-    'CSE',
-    1,
-    'A',
-    0,
-    '10:00',
-    '11:00',
-    'Programming 1A (C)'
-  );
+  addEntry('ECE', 1, 'B', 1, '09:00', '10:00', 'Mathematics – 2 (Linear Algebra)', 'lecture', 'Dr. S. Raman', 'Ramanujan Hall');
+  addEntry('ECE', 1, 'B', 1, '10:00', '11:00', 'Programming IB (Python)', 'lecture', 'Dr. N. Murthy', 'Ramanujan Hall');
+  addEntry('ECE', 1, 'B', 1, '11:15', '12:15', 'Economics – 1', 'lecture', 'Dr. A. Verma', 'Hall 102');
+  addEntry('ECE', 1, 'B', 1, '14:00', '16:00', 'Basic Electronics & Logic Lab', 'lab', 'Dr. M. Roy', 'ECE Hardware Lab');
 
-  addEntry(
-    'CSE',
-    1,
-    'A',
-    0,
-    '11:15',
-    '12:15',
-    'Digital Design'
-  );
+  addEntry('ECE', 1, 'B', 2, '09:00', '10:00', 'Digital Design', 'lecture', 'Dr. M. Roy', 'Ramanujan Hall');
+  addEntry('ECE', 1, 'B', 2, '10:00', '11:00', 'Mathematics – 1 (Calculus)', 'lecture', 'Dr. R. Sharma', 'Ramanujan Hall');
+  addEntry('ECE', 1, 'B', 2, '11:15', '12:15', 'Programming IA (C)', 'lecture', 'Dr. N. Murthy', 'Ramanujan Hall');
 
-  addEntry(
-    'CSE',
-    1,
-    'A',
-    0,
-    '13:30',
-    '14:30',
-    'English'
-  );
+  addEntry('ECE', 1, 'B', 3, '09:00', '10:00', 'Mathematics – 2 (Linear Algebra)', 'lecture', 'Dr. S. Raman', 'Ramanujan Hall');
+  addEntry('ECE', 1, 'B', 3, '10:00', '11:00', 'Programming IB (Python)', 'lecture', 'Dr. N. Murthy', 'Ramanujan Hall');
+  addEntry('ECE', 1, 'B', 3, '11:15', '12:15', 'Digital Design', 'lecture', 'Dr. M. Roy', 'Ramanujan Hall');
 
-  addEntry(
-    'CSE',
-    1,
-    'A',
-    1,
-    '09:00',
-    '10:00',
-    'Mathematics – 2 (Probability and Statistics)'
-  );
+  addEntry('ECE', 1, 'B', 4, '09:00', '10:00', 'Economics – 1', 'lecture', 'Dr. A. Verma', 'Hall 102');
+  addEntry('ECE', 1, 'B', 4, '10:00', '11:00', 'Technical English', 'lecture', 'Prof. M. Sen', 'Hall 102');
+  addEntry('ECE', 1, 'B', 4, '11:15', '12:15', 'Programming IA (C) Tutorial', 'tutorial', 'Teaching Assistants', 'Ramanujan Hall');
 
-  addEntry(
-    'CSE',
-    1,
-    'A',
-    1,
-    '10:00',
-    '11:00',
-    'Programming 1B (Python)'
-  );
+  // AI&DS Year 1 - Section B (Shares timetable slots with Section B)
+  addEntry('AI&DS', 1, 'B', 0, '09:00', '10:00', 'Calculus & Foundations', 'lecture', 'Dr. R. Sharma', 'Ramanujan Hall');
+  addEntry('AI&DS', 1, 'B', 0, '10:00', '11:00', 'Programming Foundations (C)', 'lecture', 'Dr. N. Murthy', 'Ramanujan Hall');
+  addEntry('AI&DS', 1, 'B', 0, '11:15', '12:15', 'Digital Systems & Computing', 'lecture', 'Dr. M. Roy', 'Ramanujan Hall');
 
-  addEntry(
-    'CSE',
-    1,
-    'A',
-    1,
-    '11:15',
-    '12:15',
-    'Economics – 1'
-  );
+  addEntry('AI&DS', 1, 'B', 1, '09:00', '10:00', 'Linear Algebra for Data Science', 'lecture', 'Dr. S. Raman', 'Ramanujan Hall');
+  addEntry('AI&DS', 1, 'B', 1, '10:00', '11:00', 'Python for AI & Data Science', 'lecture', 'Dr. N. Murthy', 'Ramanujan Hall');
+  addEntry('AI&DS', 1, 'B', 1, '14:00', '16:00', 'Data Processing & Python Lab', 'lab', 'AI Instructors', 'Data Science Lab');
 
-  addEntry(
-    'CSE',
-    1,
-    'A',
-    1,
-    '14:00',
-    '16:00',
-    'Programming Lab',
-    'lab'
-  );
+  addEntry('AI&DS', 1, 'B', 2, '09:00', '10:00', 'Digital Systems & Computing', 'lecture', 'Dr. M. Roy', 'Ramanujan Hall');
+  addEntry('AI&DS', 1, 'B', 2, '10:00', '11:00', 'Calculus & Foundations', 'lecture', 'Dr. R. Sharma', 'Ramanujan Hall');
+  addEntry('AI&DS', 1, 'B', 2, '11:15', '12:15', 'Linear Algebra Tutorial', 'tutorial', 'Teaching Assistants', 'Ramanujan Hall');
 
-  addEntry(
-    'CSE',
-    1,
-    'A',
-    2,
-    '09:00',
-    '10:00',
-    'Digital Design'
-  );
+  addEntry('AI&DS', 1, 'B', 3, '09:00', '10:00', 'Probability & Statistics for AI', 'lecture', 'Dr. K. Rao', 'Ramanujan Hall');
+  addEntry('AI&DS', 1, 'B', 3, '10:00', '11:00', 'Python for AI & Data Science', 'lecture', 'Dr. N. Murthy', 'Ramanujan Hall');
+  addEntry('AI&DS', 1, 'B', 3, '11:15', '12:15', 'Digital Systems & Computing', 'lecture', 'Dr. M. Roy', 'Ramanujan Hall');
 
-  addEntry(
-    'CSE',
-    1,
-    'A',
-    2,
-    '10:00',
-    '11:00',
-    'Programming 1A (C)'
-  );
-
-  addEntry(
-    'CSE',
-    1,
-    'A',
-    2,
-    '11:15',
-    '12:15',
-    'Mathematics – 1 (Linear Algebra)'
-  );
-
-  addEntry(
-    'CSE',
-    1,
-    'A',
-    3,
-    '09:00',
-    '10:00',
-    'Programming 1B (Python)'
-  );
-
-  addEntry(
-    'CSE',
-    1,
-    'A',
-    3,
-    '10:00',
-    '11:00',
-    'Mathematics – 2 (Probability and Statistics)'
-  );
-
-  addEntry(
-    'CSE',
-    1,
-    'A',
-    3,
-    '11:15',
-    '12:15',
-    'Digital Design'
-  );
-
-  addEntry(
-    'CSE',
-    1,
-    'A',
-    4,
-    '09:00',
-    '10:00',
-    'Economics – 1'
-  );
-
-  addEntry(
-    'CSE',
-    1,
-    'A',
-    4,
-    '10:00',
-    '11:00',
-    'English'
-  );
+  addEntry('AI&DS', 1, 'B', 4, '09:00', '10:00', 'Economics & Market Dynamics', 'lecture', 'Dr. A. Verma', 'Hall 102');
+  addEntry('AI&DS', 1, 'B', 4, '10:00', '11:00', 'Technical Communication', 'lecture', 'Prof. M. Sen', 'Hall 102');
 
   // ------------------------------------------------------------
-  // AI&DS YEAR 1
-  //
-  // The AI&DS programme is designed around mathematics,
-  // statistics, AI and data science foundations.
-  //
-  // These timetable slots are demo data.
+  // SECTION A & B — YEAR 2 (Curriculum progression)
   // ------------------------------------------------------------
+  // CSE Year 2 - Section A
+  addEntry('CSE', 2, 'A', 0, '09:00', '10:00', 'Data Structures & Algorithms', 'lecture', 'Dr. S. Bose', 'Hall 201');
+  addEntry('CSE', 2, 'A', 0, '10:00', '11:00', 'Computer Organization & Architecture', 'lecture', 'Dr. P. Das', 'Hall 201');
+  addEntry('CSE', 2, 'A', 1, '14:00', '16:00', 'DSA Advanced Lab', 'lab', 'Dr. S. Bose', 'CS Lab 2');
 
-  addEntry(
-    'AI&DS',
-    1,
-    'A',
-    0,
-    '09:00',
-    '10:00',
-    'Mathematics'
-  );
+  // ECE Year 2 - Section B
+  addEntry('ECE', 2, 'B', 0, '09:00', '10:00', 'Signals & Systems', 'lecture', 'Dr. T. Nair', 'Hall 202');
+  addEntry('ECE', 2, 'B', 0, '10:00', '11:00', 'Analog Circuits', 'lecture', 'Dr. G. Gupta', 'Hall 202');
+  addEntry('ECE', 2, 'B', 1, '14:00', '16:00', 'Analog Circuits Lab', 'lab', 'Dr. G. Gupta', 'ECE Lab 2');
 
-  addEntry(
-    'AI&DS',
-    1,
-    'A',
-    0,
-    '10:00',
-    '11:00',
-    'Programming'
-  );
+  // AI&DS Year 2 - Section B
+  addEntry('AI&DS', 2, 'B', 0, '09:00', '10:00', 'Mathematical Foundations of ML', 'lecture', 'Dr. K. Rao', 'Hall 202');
+  addEntry('AI&DS', 2, 'B', 0, '10:00', '11:00', 'Data Structures for Analytics', 'lecture', 'Dr. S. Bose', 'Hall 202');
+  addEntry('AI&DS', 2, 'B', 1, '14:00', '16:00', 'Applied Machine Learning Lab', 'lab', 'AI Faculty', 'AI Research Lab');
 
-  addEntry(
-    'AI&DS',
-    1,
-    'A',
-    0,
-    '11:15',
-    '12:15',
-    'Digital Design'
-  );
+  // ------------------------------------------------------------
+  // SECTION A & B — YEAR 3 (Curriculum progression)
+  // ------------------------------------------------------------
+  // CSE Year 3 - Section A
+  addEntry('CSE', 3, 'A', 0, '10:00', '11:00', 'Operating Systems', 'lecture', 'Dr. V. Prasad', 'Hall 301');
+  addEntry('CSE', 3, 'A', 0, '11:15', '12:15', 'Database Management Systems', 'lecture', 'Dr. R. Mishra', 'Hall 301');
 
-  addEntry(
-    'AI&DS',
-    1,
-    'A',
-    1,
-    '09:00',
-    '10:00',
-    'Probability & Statistics'
-  );
+  // ECE Year 3 - Section B
+  addEntry('ECE', 3, 'B', 0, '10:00', '11:00', 'VLSI Design', 'lecture', 'Dr. H. Joshi', 'Hall 302');
+  addEntry('ECE', 3, 'B', 0, '11:15', '12:15', 'Digital Signal Processing', 'lecture', 'Dr. T. Nair', 'Hall 302');
 
-  addEntry(
-    'AI&DS',
-    1,
-    'A',
-    1,
-    '10:00',
-    '11:00',
-    'Python Programming'
-  );
+  // AI&DS Year 3 - Section B
+  addEntry('AI&DS', 3, 'B', 0, '10:00', '11:00', 'Deep Learning & Neural Networks', 'lecture', 'Dr. K. Rao', 'Hall 302');
+  addEntry('AI&DS', 3, 'B', 0, '11:15', '12:15', 'Big Data Engineering', 'lecture', 'Dr. R. Mishra', 'Hall 302');
 
-  addEntry(
-    'AI&DS',
-    1,
-    'A',
-    1,
-    '14:00',
-    '16:00',
-    'Programming Lab',
-    'lab'
-  );
+  // ------------------------------------------------------------
+  // YEARS 4 & 5 — iMTech ONLY (No B.Tech)
+  // ------------------------------------------------------------
+  // CSE Year 4 (iMTech) - Section A
+  addEntry('CSE', 4, 'A', 0, '09:00', '10:30', 'Advanced Distributed Systems', 'lecture', 'Dr. V. Prasad', 'PG Seminar Hall');
+  addEntry('CSE', 4, 'A', 1, '10:30', '12:00', 'Cloud Computing Architecture', 'lecture', 'Dr. S. Bose', 'PG Seminar Hall');
 
-  addEntry(
-    'AI&DS',
-    1,
-    'A',
-    2,
-    '09:00',
-    '10:00',
-    'Linear Algebra'
-  );
+  // ECE Year 4 (iMTech) - Section B
+  addEntry('ECE', 4, 'B', 0, '09:00', '10:30', 'Advanced Embedded Systems & IoT', 'lecture', 'Dr. H. Joshi', 'VLSI Centre');
+  addEntry('ECE', 4, 'B', 1, '10:30', '12:00', 'Wireless Communication Systems', 'lecture', 'Dr. T. Nair', 'VLSI Centre');
 
-  addEntry(
-    'AI&DS',
-    1,
-    'A',
-    2,
-    '10:00',
-    '11:00',
-    'Programming'
-  );
+  // CSE Year 5 (iMTech) - Section A
+  addEntry('CSE', 5, 'A', 0, '14:00', '17:00', 'Master Thesis / Capstone Project', 'lab', 'Faculty Advisors', 'Research Wing');
 
-  addEntry(
-    'AI&DS',
-    1,
-    'A',
-    2,
-    '11:15',
-    '12:15',
-    'English'
-  );
-
-  addEntry(
-    'AI&DS',
-    1,
-    'A',
-    3,
-    '09:00',
-    '10:00',
-    'Probability & Statistics'
-  );
-
-  addEntry(
-    'AI&DS',
-    1,
-    'A',
-    3,
-    '10:00',
-    '11:00',
-    'Digital Design'
-  );
-
-  addEntry(
-    'AI&DS',
-    1,
-    'A',
-    4,
-    '09:00',
-    '10:00',
-    'Mathematics'
-  );
-
-  addEntry(
-    'AI&DS',
-    1,
-    'A',
-    4,
-    '10:00',
-    '11:00',
-    'Economics'
-  );
+  // ECE Year 5 (iMTech) - Section B
+  addEntry('ECE', 5, 'B', 0, '14:00', '17:00', 'Master Thesis / VLSI Capstone', 'lab', 'Faculty Advisors', 'Research Wing');
 
   await db.collection('timetableentries').insertMany(timetable);
 
   // ============================================================
   // 4. ASSIGNMENTS
-  //
-  // Use assignments that actually make sense for the first
-  // semester courses rather than fake second-year assignments.
+  // Mapped to Section A (CSE) and Section B (ECE & AI&DS)
   // ============================================================
 
-  console.log('📝 Seeding assignments...');
+  console.log('📝 Seeding assignments with section mappings...');
 
   const assignmentsData = [
-    // ---------------- ECE ----------------
-
+    // ---------------- SECTION A (CSE) ----------------
     {
-      branchId: branchMap['ECE'],
+      branchId: branchMap['CSE'],
       year: 1,
-      subject: 'Programming IA (C)',
+      section: 'A',
+      subject: 'Programming 1A (C)',
       title: 'C Programming Problem Set 1',
       description:
-        'Implement programs involving arrays, functions, pointers and basic input/output in C.',
-      dueDate: '2026-09-07',
+        'Implement programs involving arrays, functions, pointers and dynamic memory management in C.',
+      dueDate: '2026-09-08',
       priority: 'high',
       status: 'active',
       createdBy: classRepAdminId,
     },
-
     {
-      branchId: branchMap['ECE'],
+      branchId: branchMap['CSE'],
       year: 1,
-      subject: 'Programming IB (Python)',
-      title: 'Python Fundamentals',
+      section: 'A',
+      subject: 'Programming 1B (Python)',
+      title: 'Python Algorithmic Problem Set',
       description:
-        'Solve a set of problems covering conditionals, loops, functions, lists, dictionaries and basic file handling.',
-      dueDate: '2026-09-10',
-      priority: 'medium',
-      status: 'active',
-      createdBy: classRepAdminId,
-    },
-
-    {
-      branchId: branchMap['ECE'],
-      year: 1,
-      subject: 'Mathematics – 1 (Calculus)',
-      title: 'Calculus Problem Set',
-      description:
-        'Solve the assigned problems on limits, continuity, differentiation and applications of derivatives.',
-      dueDate: '2026-09-05',
-      priority: 'urgent',
-      status: 'active',
-      createdBy: classRepAdminId,
-    },
-
-    {
-      branchId: branchMap['ECE'],
-      year: 1,
-      subject: 'Mathematics – 2 (Linear Algebra)',
-      title: 'Linear Algebra Worksheet',
-      description:
-        'Problems covering vectors, matrices, linear transformations and systems of linear equations.',
+        'Solve programming exercises using Python dictionaries, list comprehensions, recursion and file handling.',
       dueDate: '2026-09-12',
       priority: 'medium',
       status: 'active',
       createdBy: classRepAdminId,
     },
-
     {
-      branchId: branchMap['ECE'],
+      branchId: branchMap['CSE'],
       year: 1,
-      subject: 'Digital Design',
-      title: 'Boolean Logic & Combinational Circuits',
+      section: 'A',
+      subject: 'Mathematics – 1 (Linear Algebra)',
+      title: 'Linear Algebra Worksheet 1',
       description:
-        'Simplify Boolean expressions and design combinational circuits using standard digital logic techniques.',
+        'Vector spaces, subspaces, Gaussian elimination, eigenvalues and matrix transformations.',
+      dueDate: '2026-09-06',
+      priority: 'urgent',
+      status: 'active',
+      createdBy: classRepAdminId,
+    },
+    {
+      branchId: branchMap['CSE'],
+      year: 1,
+      section: 'A',
+      subject: 'Digital Design',
+      title: 'Combinational Logic Simplification',
+      description:
+        'K-Map minimization, Boolean algebra simplification and decoder/multiplexer logic design.',
       dueDate: '2026-09-15',
       priority: 'high',
       status: 'active',
       createdBy: classRepAdminId,
     },
 
-    // ---------------- CSE ----------------
-
+    // ---------------- SECTION B (ECE) ----------------
     {
-      branchId: branchMap['CSE'],
+      branchId: branchMap['ECE'],
       year: 1,
-      subject: 'Programming 1A (C)',
-      title: 'C Programming Assignment',
+      section: 'B',
+      subject: 'Mathematics – 1 (Calculus)',
+      title: 'Differential Calculus Problem Set',
       description:
-        'Implement a collection of programs using arrays, pointers, functions and structures.',
-      dueDate: '2026-09-07',
+        'Limits, continuity, mean value theorems, Taylor series and multivariable derivatives.',
+      dueDate: '2026-09-05',
+      priority: 'urgent',
+      status: 'active',
+      createdBy: classRepAdminId,
+    },
+    {
+      branchId: branchMap['ECE'],
+      year: 1,
+      section: 'B',
+      subject: 'Programming IA (C)',
+      title: 'C Embedded Control Programs',
+      description:
+        'Bitwise operators, pointer arithmetic, struct arrays and hardware simulation in C.',
+      dueDate: '2026-09-08',
       priority: 'high',
       status: 'active',
       createdBy: classRepAdminId,
     },
-
     {
-      branchId: branchMap['CSE'],
+      branchId: branchMap['ECE'],
       year: 1,
-      subject: 'Programming 1B (Python)',
-      title: 'Python Programming Exercises',
+      section: 'B',
+      subject: 'Digital Design',
+      title: 'Sequential Logic & State Machines',
       description:
-        'Solve programming problems using Python control flow, functions and built-in data structures.',
+        'Flip-flops, synchronous counters and Mealy/Moore state machine design.',
+      dueDate: '2026-09-14',
+      priority: 'high',
+      status: 'active',
+      createdBy: classRepAdminId,
+    },
+    {
+      branchId: branchMap['ECE'],
+      year: 1,
+      section: 'B',
+      subject: 'Mathematics – 2 (Linear Algebra)',
+      title: 'Matrix Operations & Eigenvectors',
+      description:
+        'Linear systems, orthogonal projections, Gram-Schmidt process and spectral decomposition.',
       dueDate: '2026-09-11',
       priority: 'medium',
       status: 'active',
       createdBy: classRepAdminId,
     },
 
+    // ---------------- SECTION B (AI&DS) ----------------
     {
-      branchId: branchMap['CSE'],
+      branchId: branchMap['AI&DS'],
       year: 1,
-      subject: 'Digital Design',
-      title: 'Digital Logic Assignment',
+      section: 'B',
+      subject: 'Python for AI & Data Science',
+      title: 'NumPy & Pandas Data Pipeline',
       description:
-        'Design and simplify Boolean circuits and solve problems involving combinational digital logic.',
-      dueDate: '2026-09-14',
-      priority: 'high',
-      status: 'active',
-      createdBy: classRepAdminId,
-    },
-
-    {
-      branchId: branchMap['CSE'],
-      year: 1,
-      subject: 'Mathematics – 1 (Linear Algebra)',
-      title: 'Linear Algebra Problem Set',
-      description:
-        'Solve problems involving matrices, vector spaces, linear systems and linear transformations.',
+        'Matrix computations with NumPy arrays and tabular data cleaning with Pandas.',
       dueDate: '2026-09-09',
-      priority: 'medium',
-      status: 'active',
-      createdBy: classRepAdminId,
-    },
-
-    // ---------------- AI&DS ----------------
-
-    {
-      branchId: branchMap['AI&DS'],
-      year: 1,
-      subject: 'Programming',
-      title: 'Python Programming Assignment',
-      description:
-        'Implement introductory data-processing and algorithmic problems using Python.',
-      dueDate: '2026-09-08',
       priority: 'high',
       status: 'active',
       createdBy: classRepAdminId,
     },
-
     {
       branchId: branchMap['AI&DS'],
       year: 1,
-      subject: 'Probability & Statistics',
-      title: 'Probability Problem Set',
+      section: 'B',
+      subject: 'Probability & Statistics for AI',
+      title: 'Bayesian Probability & Random Variables',
       description:
-        'Solve problems involving conditional probability, random variables and basic probability distributions.',
+        'Conditional probability, Bayes rule, continuous probability distributions and MLE estimation.',
       dueDate: '2026-09-13',
       priority: 'medium',
       status: 'active',
       createdBy: classRepAdminId,
     },
-
     {
       branchId: branchMap['AI&DS'],
       year: 1,
-      subject: 'Linear Algebra',
-      title: 'Matrix Methods Worksheet',
+      section: 'B',
+      subject: 'Linear Algebra for Data Science',
+      title: 'SVD & Dimensionality Reduction Basics',
       description:
-        'Problems covering matrices, vectors, linear systems and fundamental linear algebra operations.',
+        'Matrix factorization, PCA foundations, and geometric interpretations of linear transformations.',
       dueDate: '2026-09-10',
       priority: 'medium',
+      status: 'active',
+      createdBy: classRepAdminId,
+    },
+
+    // ---------------- iMTech (Years 4 & 5) ----------------
+    {
+      branchId: branchMap['CSE'],
+      year: 4,
+      section: 'A',
+      subject: 'Advanced Distributed Systems',
+      title: 'Consensus Protocols Implementation (Raft)',
+      description:
+        'Implement leader election and log replication using gRPC in Go or C++.',
+      dueDate: '2026-09-20',
+      priority: 'urgent',
+      status: 'active',
+      createdBy: classRepAdminId,
+    },
+    {
+      branchId: branchMap['ECE'],
+      year: 4,
+      section: 'B',
+      subject: 'Advanced Embedded Systems & IoT',
+      title: 'RTOS Task Scheduling & Driver Development',
+      description:
+        'Configure FreeRTOS semaphores, mutexes and write a custom SPI sensor driver.',
+      dueDate: '2026-09-21',
+      priority: 'urgent',
       status: 'active',
       createdBy: classRepAdminId,
     },
@@ -898,59 +563,35 @@ async function seed() {
   // 5. NOTIFICATIONS
   // ============================================================
 
-  console.log('🔔 Seeding notifications...');
+  console.log('🔔 Seeding batch notifications...');
 
   const notificationsData = [
     {
-      branchId: branchMap['ECE'],
-      year: 1,
-      title: 'Welcome to IIIT-B',
-      message:
-        'Your timetable and academic dashboard for the 2026 B.Tech. ECE batch are ready.',
-      type: 'info',
-      isRead: false,
-      createdAt: now,
-    },
-
-    {
-      branchId: branchMap['ECE'],
-      year: 1,
-      title: 'New Programming Assignment',
-      message:
-        'A new C programming problem set has been added. Check the Assignments section for details.',
-      type: 'assignment',
-      isRead: false,
-      createdAt: now,
-    },
-
-    {
-      branchId: branchMap['ECE'],
-      year: 1,
-      title: 'Digital Design Assignment',
-      message:
-        'A new Digital Design assignment has been added to your dashboard.',
-      type: 'assignment',
-      isRead: false,
-      createdAt: now,
-    },
-
-    {
       branchId: branchMap['CSE'],
       year: 1,
-      title: 'Welcome to IIIT-B',
+      title: 'Welcome to Section A (CSE)',
       message:
-        'Your academic dashboard for the 2026 B.Tech. CSE batch is ready.',
+        'Your timetable for CSE (B.Tech & iMTech) in Section A is now active. Check your class schedule.',
       type: 'info',
       isRead: false,
       createdAt: now,
     },
-
+    {
+      branchId: branchMap['ECE'],
+      year: 1,
+      title: 'Welcome to Section B (ECE & AI&DS)',
+      message:
+        'Your schedule for ECE in Section B is now live. Core classes are grouped with AI&DS.',
+      type: 'info',
+      isRead: false,
+      createdAt: now,
+    },
     {
       branchId: branchMap['AI&DS'],
       year: 1,
-      title: 'Welcome to IIIT-B',
+      title: 'Welcome to Section B (AI&DS & ECE)',
       message:
-        'Your academic dashboard for the 2026 B.Tech. AI&DS batch is ready.',
+        'Your academic timetable for B.Tech AI&DS in Section B is now published.',
       type: 'info',
       isRead: false,
       createdAt: now,
@@ -963,20 +604,22 @@ async function seed() {
   // 6. SUMMARY
   // ============================================================
 
-  console.log('\n✅ IIIT-B MongoDB Seed Completed Successfully!');
+  console.log('\n✅ IIIT-B Database Seeding Completed Successfully!');
+  console.log('==================================================');
+  console.log('🏛️  ACADEMIC STRUCTURE & SECTION DISTRIBUTION:');
+  console.log('   • Section A: CSE (B.Tech & iMTech, Years 1–5)');
+  console.log('   • Section B: ECE (B.Tech & iMTech) + AI&DS (B.Tech)');
+  console.log('   • Years 1–3: All branches (B.Tech & iMTech)');
+  console.log('   • Years 4–5: iMTech ONLY (CSE & ECE only; no B.Tech)');
   console.log('--------------------------------------------------');
-  console.log('Branches: CSE, ECE, AI&DS');
-  console.log('Student demo: student.ece@iiitb.ac.in');
-  console.log('Year: 1');
-  console.log('Batch: 2026');
-  console.log('--------------------------------------------------');
-  console.log(
-    '⚠️  Timetable entries are DEMO schedules using IIIT-B curriculum course names.'
-  );
-  console.log(
-    '⚠️  Do not present their rooms/times/faculty as official IIIT-B information.'
-  );
-  console.log('--------------------------------------------------\n');
+  console.log('🔑 DEMO ACCOUNTS:');
+  console.log('   • Superadmin:   classreps@iiitb.ac.in (tbsm-naamsujal-vichaar-Vy0m)');
+  console.log('   • CSE Student:  student.cse@iiitb.ac.in -> Section A, Year 1 (student123)');
+  console.log('   • ECE Student:  student.ece@iiitb.ac.in -> Section B, Year 1 (student123)');
+  console.log('   • AI&DS Student: student.aids@iiitb.ac.in -> Section B, Year 1 (student123)');
+  console.log('   • iMTech CSE:   imtech.cse@iiitb.ac.in -> Section A, Year 4 (student123)');
+  console.log('   • iMTech ECE:   imtech.ece@iiitb.ac.in -> Section B, Year 4 (student123)');
+  console.log('==================================================\n');
 
   await mongoose.disconnect();
 }

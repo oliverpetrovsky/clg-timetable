@@ -133,24 +133,14 @@ async function seedDefaultDataIfEmpty(mongooseInstance: typeof mongoose) {
     });
   }
 
-  // Ensure demo student accounts
+  // Ensure demo student accounts with accurate section distribution:
+  // - Section A: CSE
+  // - Section B: ECE and AI&DS (grouped together)
   const studentHash = await bcrypt.hash('student123', 12);
-
-  if (eceBranch && !(await User.findOne({ email: 'student.ece@iiitb.ac.in' }))) {
-    await User.create({
-      name: 'IIIT-B ECE Student',
-      email: 'student.ece@iiitb.ac.in',
-      passwordHash: studentHash,
-      role: 'student',
-      branchId: eceBranch._id,
-      year: 1,
-      section: 'A',
-    });
-  }
 
   if (cseBranch && !(await User.findOne({ email: 'student.cse@iiitb.ac.in' }))) {
     await User.create({
-      name: 'IIIT-B CSE Student',
+      name: 'IIIT-B CSE Student (Sec A)',
       email: 'student.cse@iiitb.ac.in',
       passwordHash: studentHash,
       role: 'student',
@@ -160,15 +150,52 @@ async function seedDefaultDataIfEmpty(mongooseInstance: typeof mongoose) {
     });
   }
 
+  if (eceBranch && !(await User.findOne({ email: 'student.ece@iiitb.ac.in' }))) {
+    await User.create({
+      name: 'IIIT-B ECE Student (Sec B)',
+      email: 'student.ece@iiitb.ac.in',
+      passwordHash: studentHash,
+      role: 'student',
+      branchId: eceBranch._id,
+      year: 1,
+      section: 'B',
+    });
+  }
+
   if (aidsBranch && !(await User.findOne({ email: 'student.aids@iiitb.ac.in' }))) {
     await User.create({
-      name: 'IIIT-B AI&DS Student',
+      name: 'IIIT-B AI&DS Student (Sec B)',
       email: 'student.aids@iiitb.ac.in',
       passwordHash: studentHash,
       role: 'student',
       branchId: aidsBranch._id,
       year: 1,
+      section: 'B',
+    });
+  }
+
+  // Senior iMTech Students (Years 4 & 5 - iMTech only, no B.Tech)
+  if (cseBranch && !(await User.findOne({ email: 'imtech.cse@iiitb.ac.in' }))) {
+    await User.create({
+      name: 'IIIT-B iMTech CSE Senior',
+      email: 'imtech.cse@iiitb.ac.in',
+      passwordHash: studentHash,
+      role: 'student',
+      branchId: cseBranch._id,
+      year: 4,
       section: 'A',
+    });
+  }
+
+  if (eceBranch && !(await User.findOne({ email: 'imtech.ece@iiitb.ac.in' }))) {
+    await User.create({
+      name: 'IIIT-B iMTech ECE Senior',
+      email: 'imtech.ece@iiitb.ac.in',
+      passwordHash: studentHash,
+      role: 'student',
+      branchId: eceBranch._id,
+      year: 4,
+      section: 'B',
     });
   }
 }

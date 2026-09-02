@@ -208,7 +208,15 @@ export default function AdminPage() {
     setMgmtBranchId(bId);
     setTtBranchId(bId);
     setAsBranchId(bId);
-    fetchTimetable(bId, mgmtYear, mgmtSection);
+    const sel = branches.find(b => String(b.id || b._id) === String(bId));
+    let newSec = mgmtSection;
+    if (sel) {
+      if (sel.code === 'CSE') newSec = 'A';
+      else if (sel.code === 'ECE' || sel.code === 'AI&DS') newSec = 'B';
+      setMgmtSection(newSec);
+      setTtSection(newSec);
+    }
+    fetchTimetable(bId, mgmtYear, newSec);
     fetchAssignments(bId, mgmtYear);
   };
 

@@ -144,7 +144,17 @@ export default function TimetableView({
 
   const handleBranchChange = (newBranchId: string) => {
     setBranchId(newBranchId);
-    savePreferenceCookie(newBranchId, year, section);
+    const selectedBranch = branches.find(b => String(b.id || (b as any)._id) === String(newBranchId));
+    let newSection = section;
+    if (selectedBranch) {
+      if (selectedBranch.code === 'CSE') {
+        newSection = 'A';
+      } else if (selectedBranch.code === 'ECE' || selectedBranch.code === 'AI&DS') {
+        newSection = 'B';
+      }
+      setSection(newSection);
+    }
+    savePreferenceCookie(newBranchId, year, newSection);
   };
 
   const handleYearChange = (newYear: number) => {
@@ -160,22 +170,23 @@ export default function TimetableView({
   // Fetch timetable entries
   useEffect(() => {
     if (!branchId) return;
+
     setLoading(true);
     fetch(`/api/timetable?branchId=${branchId}&year=${year}&section=${section}`)
       .then(res => res.json())
       .then(data => {
         setEntries(data.entries || []);
-        setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch(() => setEntries([]))
+      .finally(() => setLoading(false));
   }, [branchId, year, section]);
 
-  // Filter entries for active day & search query
+  // Filter entries for currently selected day & search query
   const dayEntries = useMemo(() => {
     return entries.filter(e => {
-      const matchesDay = e.day_of_week === activeDay;
-      if (!matchesDay) return false;
-      if (!searchQuery) return true;
+      const matchDay = (e.day_of_week ?? e.day_of_week) === activeDay;
+      if (!matchDay) return false;
+      if (!searchQuery.trim()) return true;
       const q = searchQuery.toLowerCase();
       return (
         e.subject.toLowerCase().includes(q) ||
@@ -230,7 +241,7 @@ export default function TimetableView({
             >
               <option value="">Select Branch</option>
               {branches.map(b => (
-                <option key={b.id} value={b.id}>
+                <option key={b.id || (b as any)._id} value={b.id || (b as any)._id}>
                   {b.code} — {b.name}
                 </option>
               ))}
@@ -240,22 +251,23 @@ export default function TimetableView({
             <select
               value={year}
               onChange={e => handleYearChange(parseInt(e.target.value))}
-              className="select-field text-xs py-2 w-28"
+              className="select-field text-xs py-2 w-32"
             >
-              {[1, 2, 3, 4].map(y => (
-                <option key={y} value={y}>Year {y}</option>
-              ))}
+              <option value={1}>Year 1</option>
+              <option value={2}>Year 2</option>
+              <option value={3}>Year 3</option>
+              <option value={4}>Year 4 (iMTech)</option>
+              <option value={5}>Year 5 (iMTech)</option>
             </select>
 
             {/* Section Select */}
             <select
               value={section}
               onChange={e => handleSectionChange(e.target.value)}
-              className="select-field text-xs py-2 w-28"
+              className="select-field text-xs py-2 min-w-[140px]"
             >
-              {['A', 'B', 'C', 'D'].map(s => (
-                <option key={s} value={s}>Section {s}</option>
-              ))}
+              <option value="A">Section A (CSE)</option>
+              <option value="B">Section B (ECE & AI&DS)</option>
             </select>
 
             {hasSavedPref && (

@@ -78,7 +78,7 @@ export default function LoginPage() {
               </span>
               <span className="text-[10px] text-slate-400 font-normal">Click to fill</span>
             </div>
-            <div className="grid grid-cols-3 gap-1.5">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
               <button
                 type="button"
                 onClick={() => fillQuickAccount('classreps@iiitb.ac.in', 'tbsm-naamsujal-vichaar-Vy0m')}
@@ -97,11 +97,19 @@ export default function LoginPage() {
               </button>
               <button
                 type="button"
-                onClick={() => fillQuickAccount('student.ece@iiitb.ac.in', 'student123')}
+                onClick={() => fillQuickAccount('student.cse@iiitb.ac.in', 'student123')}
                 className="py-1.5 px-2 text-[11px] font-medium bg-white hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 border border-slate-200 rounded-xl transition-all text-slate-700 flex flex-col items-center shadow-xs"
               >
-                <span className="font-bold text-emerald-600">Student</span>
-                <span className="text-[9px] text-slate-400">ECE Y1</span>
+                <span className="font-bold text-emerald-600">CSE (Sec A)</span>
+                <span className="text-[9px] text-slate-400">Year 1</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => fillQuickAccount('student.ece@iiitb.ac.in', 'student123')}
+                className="py-1.5 px-2 text-[11px] font-medium bg-white hover:bg-purple-50 hover:text-purple-700 hover:border-purple-200 border border-slate-200 rounded-xl transition-all text-slate-700 flex flex-col items-center shadow-xs"
+              >
+                <span className="font-bold text-purple-600">ECE (Sec B)</span>
+                <span className="text-[9px] text-slate-400">Year 1</span>
               </button>
             </div>
           </div>

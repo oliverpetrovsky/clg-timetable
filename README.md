@@ -66,17 +66,28 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ---
 
+## 🏛️ Academic Structure & Section Distribution
+
+- **Section A**: **CSE** (B.Tech & 5-year iMTech)
+- **Section B**: **ECE** (B.Tech & 5-year iMTech) + **AI&DS** (B.Tech) — *grouped together for shared foundational & interdisciplinary curriculum*
+- **Years 1–3**: All programmes (B.Tech & iMTech)
+- **Years 4 & 5**: **iMTech ONLY** (CSE & ECE; B.Tech was launched later and does not have 4th/5th years)
+
+---
+
 ## 🔑 Demo Accounts (IIIT-B)
 
-| Role | Email | Password | Access |
-|------|-------|----------|--------|
-| 🔴 **Super Admin (CR)** | `classreps@iiitb.ac.in` | `tbsm-naamsujal-vichaar-Vy0m` | Full system control & user promotion |
-| 🟠 **ECE Admin** | `ece.admin@iiitb.ac.in` | `branch123` | Manage ECE department timetable & assignments |
-| 🟠 **CSE Admin** | `cse.admin@iiitb.ac.in` | `branch123` | Manage CSE department timetable & assignments |
-| 🟠 **AI&DS Admin** | `aids.admin@iiitb.ac.in` | `branch123` | Manage AI&DS department timetable & assignments |
-| 🟢 **ECE Student** | `student.ece@iiitb.ac.in` | `student123` | ECE Year 1 — Personal dashboard & Notion sync |
-| 🟢 **CSE Student** | `student.cse@iiitb.ac.in` | `student123` | CSE Year 1 — Personal dashboard & Notion sync |
-| 🟢 **AI&DS Student** | `student.aids@iiitb.ac.in` | `student123` | AI&DS Year 1 — Personal dashboard & Notion sync |
+| Role | Email | Password | Batch / Section | Access |
+|------|-------|----------|-----------------|--------|
+| 🔴 **Super Admin (CR)** | `classreps@iiitb.ac.in` | `tbsm-naamsujal-vichaar-Vy0m` | All Batches | Full system control & user promotion |
+| 🟠 **CSE Admin** | `cse.admin@iiitb.ac.in` | `branch123` | CSE Department | Manage CSE timetables & assignments |
+| 🟠 **ECE Admin** | `ece.admin@iiitb.ac.in` | `branch123` | ECE Department | Manage ECE timetables & assignments |
+| 🟠 **AI&DS Admin** | `aids.admin@iiitb.ac.in` | `branch123` | AI&DS Department | Manage AI&DS timetables & assignments |
+| 🟢 **CSE Student** | `student.cse@iiitb.ac.in` | `student123` | **Year 1 — Section A** | Personal dashboard & Notion sync |
+| 🟢 **ECE Student** | `student.ece@iiitb.ac.in` | `student123` | **Year 1 — Section B** | Personal dashboard & Notion sync |
+| 🟢 **AI&DS Student** | `student.aids@iiitb.ac.in` | `student123` | **Year 1 — Section B** | Personal dashboard & Notion sync |
+| 🟣 **iMTech CSE Senior** | `imtech.cse@iiitb.ac.in` | `student123` | **Year 4 — Section A** | iMTech Senior Dashboard |
+| 🟣 **iMTech ECE Senior** | `imtech.ece@iiitb.ac.in` | `student123` | **Year 4 — Section B** | iMTech Senior Dashboard |
 
 ---
 
