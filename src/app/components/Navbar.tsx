@@ -1,8 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
-import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { 
   Calendar, 
   BookOpen, 
@@ -32,7 +31,6 @@ export default function Navbar() {
   const [notifCount, setNotifCount] = useState(0);
   const [showNotionModal, setShowNotionModal] = useState(false);
   const pathname = usePathname();
-  const router = useRouter();
 
   useEffect(() => {
     fetch('/api/auth/me')
@@ -60,8 +58,7 @@ export default function Navbar() {
     } catch {}
     setUser(null);
     setMenuOpen(false);
-    router.push('/');
-    router.refresh();
+    window.location.href = '/';
   };
 
   const isActive = (path: string) => pathname === path;
@@ -74,9 +71,8 @@ export default function Navbar() {
             
             {/* Brand Logo */}
             <div className="flex items-center gap-8">
-              <Link 
+              <a 
                 href="/" 
-                onClick={() => setMenuOpen(false)}
                 className="flex items-center gap-2.5 group cursor-pointer"
               >
                 <div className="w-9 h-9 rounded-xl bg-slate-900 text-white flex items-center justify-center font-bold text-sm shadow-sm group-hover:scale-105 transition-transform">
@@ -92,11 +88,11 @@ export default function Navbar() {
                     IIIT-B Portal
                   </span>
                 </div>
-              </Link>
+              </a>
 
               {/* Desktop Nav Links */}
               <nav className="hidden md:flex items-center gap-1.5">
-                <Link
+                <a
                   href="/timetable"
                   className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
                     isActive('/timetable')
@@ -106,9 +102,9 @@ export default function Navbar() {
                 >
                   <Calendar className="w-3.5 h-3.5" />
                   Timetable
-                </Link>
+                </a>
 
-                <Link
+                <a
                   href="/assignments"
                   className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
                     isActive('/assignments')
@@ -118,10 +114,10 @@ export default function Navbar() {
                 >
                   <BookOpen className="w-3.5 h-3.5" />
                   Assignments
-                </Link>
+                </a>
 
                 {user && (
-                  <Link
+                  <a
                     href="/dashboard"
                     className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
                       isActive('/dashboard')
@@ -131,11 +127,11 @@ export default function Navbar() {
                   >
                     <LayoutDashboard className="w-3.5 h-3.5" />
                     Dashboard
-                  </Link>
+                  </a>
                 )}
 
                 {user && (user.role === 'admin' || user.role === 'superadmin') && (
-                  <Link
+                  <a
                     href="/admin"
                     className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
                       isActive('/admin')
@@ -145,7 +141,7 @@ export default function Navbar() {
                   >
                     <Shield className="w-3.5 h-3.5" />
                     Admin Panel
-                  </Link>
+                  </a>
                 )}
               </nav>
             </div>
@@ -160,7 +156,7 @@ export default function Navbar() {
               {user ? (
                 <div className="flex items-center gap-3 pl-2 border-l border-slate-200">
                   {/* Notifications Link */}
-                  <Link
+                  <a
                     href="/dashboard?tab=notifications"
                     className="relative p-2 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
                     title="Notifications"
@@ -171,7 +167,7 @@ export default function Navbar() {
                         {notifCount > 9 ? '9+' : notifCount}
                       </span>
                     )}
-                  </Link>
+                  </a>
 
                   {/* User Profile Pill */}
                   <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200/80">
@@ -200,18 +196,18 @@ export default function Navbar() {
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
-                  <Link
+                  <a
                     href="/login"
                     className="btn-secondary text-xs py-2 px-3.5 cursor-pointer shadow-sm font-semibold"
                   >
                     Log in
-                  </Link>
-                  <Link
+                  </a>
+                  <a
                     href="/register"
                     className="btn-primary text-xs py-2 px-4 shadow-sm cursor-pointer font-semibold"
                   >
                     Get Started
-                  </Link>
+                  </a>
                 </div>
               )}
             </div>
@@ -245,49 +241,45 @@ export default function Navbar() {
         {menuOpen && (
           <div className="md:hidden border-t border-slate-200 bg-white px-4 pt-3 pb-6 space-y-3 shadow-xl animate-fade-in">
             <div className="space-y-1">
-              <Link
+              <a
                 href="/timetable"
-                onClick={() => setMenuOpen(false)}
                 className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold cursor-pointer ${
                   isActive('/timetable') ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'
                 }`}
               >
                 <Calendar className="w-4 h-4" />
                 Timetable
-              </Link>
-              <Link
+              </a>
+              <a
                 href="/assignments"
-                onClick={() => setMenuOpen(false)}
                 className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold cursor-pointer ${
                   isActive('/assignments') ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'
                 }`}
               >
                 <BookOpen className="w-4 h-4" />
                 Assignments
-              </Link>
+              </a>
               {user && (
-                <Link
+                <a
                   href="/dashboard"
-                  onClick={() => setMenuOpen(false)}
                   className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold cursor-pointer ${
                     isActive('/dashboard') ? 'bg-blue-600 text-white' : 'text-slate-600 hover:bg-slate-50'
                   }`}
                 >
                   <LayoutDashboard className="w-4 h-4" />
                   Personal Dashboard
-                </Link>
+                </a>
               )}
               {user && (user.role === 'admin' || user.role === 'superadmin') && (
-                <Link
+                <a
                   href="/admin"
-                  onClick={() => setMenuOpen(false)}
                   className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold cursor-pointer ${
                     isActive('/admin') ? 'bg-purple-700 text-white' : 'text-slate-600 hover:bg-slate-50'
                   }`}
                 >
                   <Shield className="w-4 h-4" />
                   Admin Panel
-                </Link>
+                </a>
               )}
             </div>
 
@@ -312,20 +304,18 @@ export default function Navbar() {
               </div>
             ) : (
               <div className="pt-3 border-t border-slate-100 grid grid-cols-2 gap-2">
-                <Link
+                <a
                   href="/login"
-                  onClick={() => setMenuOpen(false)}
                   className="btn-secondary text-xs text-center py-2.5 cursor-pointer font-semibold"
                 >
                   Log in
-                </Link>
-                <Link
+                </a>
+                <a
                   href="/register"
-                  onClick={() => setMenuOpen(false)}
                   className="btn-primary text-xs text-center py-2.5 cursor-pointer font-semibold"
                 >
                   Sign up
-                </Link>
+                </a>
               </div>
             )}
           </div>
