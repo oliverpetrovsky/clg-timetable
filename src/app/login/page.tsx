@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Navbar from '../components/Navbar';
 import { 
   GraduationCap, 
   Loader2, 
@@ -12,8 +11,8 @@ import {
   Eye, 
   EyeOff, 
   AlertCircle, 
-  Sparkles,
-  ArrowRight,
+  Sparkles, 
+  ArrowRight, 
   ShieldCheck
 } from 'lucide-react';
 
@@ -60,10 +59,7 @@ export default function LoginPage() {
   };
 
   return (
-    <>
-      <Navbar />
-
-      <div className="flex-1 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 animate-fade-in">
+    <div className="flex-1 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 animate-fade-in">
         <div className="card max-w-md w-full p-6 sm:p-8 space-y-6 shadow-xl border-slate-200/90">
           
           {/* Header */}
@@ -185,6 +181,5 @@ export default function LoginPage() {
 
         </div>
       </div>
-    </>
   );
 }

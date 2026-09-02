@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import Navbar from './components/Navbar';
 import { 
   Calendar, 
   BookOpen, 
@@ -51,8 +50,6 @@ export default function Home() {
 
   return (
     <>
-      <Navbar />
-
       <main className="flex-1">
         
         {/* Hero Section */}

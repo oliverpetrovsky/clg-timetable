@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import Navbar from '../components/Navbar';
 import { 
   Plus, 
   Trash2, 
@@ -385,12 +384,9 @@ export default function AdminPage() {
 
   if (loading) {
     return (
-      <>
-        <Navbar />
-        <div className="flex-1 flex items-center justify-center min-h-[60vh]">
-          <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
-        </div>
-      </>
+      <div className="flex-1 flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
+      </div>
     );
   }
 
@@ -398,8 +394,6 @@ export default function AdminPage() {
 
   return (
     <>
-      <Navbar />
-
       <main className="flex-1 py-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-8 animate-fade-in">
         
         {/* Admin Header */}

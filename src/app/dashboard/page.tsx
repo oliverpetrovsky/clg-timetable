@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import Navbar from '../components/Navbar';
 import TimetableView from '../components/TimetableView';
 import AssignmentList from '../components/AssignmentList';
 import NotionSyncModal from '../components/NotionSyncModal';
@@ -181,15 +180,12 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <>
-        <Navbar />
-        <div className="flex items-center justify-center min-h-[calc(100vh-64px)]">
-          <div className="flex flex-col items-center gap-3">
-            <div className="w-8 h-8 rounded-full border-2 border-slate-900 border-t-transparent animate-spin" />
-            <p className="text-xs text-slate-500 font-medium">Loading your dashboard...</p>
-          </div>
+      <div className="flex items-center justify-center min-h-[calc(100vh-64px)] flex-1">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 rounded-full border-2 border-slate-900 border-t-transparent animate-spin" />
+          <p className="text-xs text-slate-500 font-medium">Loading your dashboard...</p>
         </div>
-      </>
+      </div>
     );
   }
 
@@ -197,9 +193,7 @@ export default function DashboardPage() {
 
   return (
     <>
-      <Navbar />
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-fade-in">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-fade-in flex-1">
         
         {/* Personalized Hero Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-slate-200/80">

@@ -1,13 +1,9 @@
-import Navbar from '../components/Navbar';
 import TimetableView from '../components/TimetableView';
 import { Calendar, Sparkles } from 'lucide-react';
 
 export default function TimetablePage() {
   return (
-    <>
-      <Navbar />
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-10 space-y-6 animate-fade-in">
+    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-10 space-y-6 animate-fade-in flex-1">
         
         {/* Page Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-200/80">
@@ -33,6 +29,5 @@ export default function TimetablePage() {
         <TimetableView />
 
       </main>
-    </>
   );
 }
