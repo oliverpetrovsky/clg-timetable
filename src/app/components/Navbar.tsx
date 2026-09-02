@@ -10,7 +10,8 @@ import {
   LogOut, 
   Menu, 
   X, 
-  LayoutDashboard
+  LayoutDashboard,
+  GraduationCap
 } from 'lucide-react';
 import NotionSyncModal from './NotionSyncModal';
 import NotionWidget from './NotionWidget';
@@ -102,6 +103,18 @@ export default function Navbar() {
                 >
                   <Calendar className="w-3.5 h-3.5" />
                   Timetable
+                </a>
+
+                <a
+                  href="/quizzes"
+                  className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
+                    isActive('/quizzes')
+                      ? 'bg-slate-900 text-white shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                  }`}
+                >
+                  <GraduationCap className="w-3.5 h-3.5 text-purple-600" />
+                  Quizzes
                 </a>
 
                 <a
@@ -249,6 +262,15 @@ export default function Navbar() {
               >
                 <Calendar className="w-4 h-4" />
                 Timetable
+              </a>
+              <a
+                href="/quizzes"
+                className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold cursor-pointer ${
+                  isActive('/quizzes') ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                <GraduationCap className="w-4 h-4 text-purple-600" />
+                Quizzes
               </a>
               <a
                 href="/assignments"

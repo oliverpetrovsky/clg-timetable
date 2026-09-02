@@ -14,7 +14,8 @@ import {
   Sparkles,
   Layers,
   Calendar,
-  Tag
+  Tag,
+  ArrowUpDown
 } from 'lucide-react';
 import NotionSyncModal from './NotionSyncModal';
 
@@ -48,6 +49,13 @@ const PRIORITY_CONFIG: Record<string, { badge: string; dot: string; label: strin
   urgent: { badge: 'badge-urgent', dot: 'bg-rose-500', label: 'Urgent' },
 };
 
+const PRIORITY_ORDER: Record<string, number> = {
+  urgent: 4,
+  high: 3,
+  medium: 2,
+  low: 1,
+};
+
 interface AssignmentListProps {
   initialBranchId?: string | number;
   initialYear?: number;
@@ -74,6 +82,7 @@ export default function AssignmentList({
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPriority, setSelectedPriority] = useState('all');
+  const [sortBy, setSortBy] = useState<'dueDate' | 'priority' | 'subject' | 'title'>('dueDate');
   const [trackedMap, setTrackedMap] = useState<Record<number, string>>({});
   const [showNotionModal, setShowNotionModal] = useState(false);
 
@@ -271,9 +280,9 @@ export default function AssignmentList({
     }
   };
 
-  // Filtered assignments
+  // Filtered and sorted assignments
   const filteredAssignments = useMemo(() => {
-    return assignments.filter(item => {
+    const list = assignments.filter(item => {
       // Priority filter
       if (selectedPriority !== 'all' && item.priority !== selectedPriority) return false;
       // Search query
@@ -285,7 +294,40 @@ export default function AssignmentList({
         (item.description && item.description.toLowerCase().includes(q))
       );
     });
-  }, [assignments, selectedPriority, searchQuery]);
+
+    return list.sort((a, b) => {
+      // Completed status (tracked)
+      const statusA = trackedMap[a.id] || 'pending';
+      const statusB = trackedMap[b.id] || 'pending';
+      if (statusA === 'completed' && statusB !== 'completed') return 1;
+      if (statusA !== 'completed' && statusB === 'completed') return -1;
+
+      if (sortBy === 'priority') {
+        const pA = PRIORITY_ORDER[a.priority] || 2;
+        const pB = PRIORITY_ORDER[b.priority] || 2;
+        if (pA !== pB) return pB - pA;
+        return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
+      }
+
+      if (sortBy === 'dueDate') {
+        const diff = new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
+        if (diff !== 0) return diff;
+        const pA = PRIORITY_ORDER[a.priority] || 2;
+        const pB = PRIORITY_ORDER[b.priority] || 2;
+        return pB - pA;
+      }
+
+      if (sortBy === 'subject') {
+        return a.subject.localeCompare(b.subject);
+      }
+
+      if (sortBy === 'title') {
+        return a.title.localeCompare(b.title);
+      }
+
+      return 0;
+    });
+  }, [assignments, selectedPriority, searchQuery, sortBy, trackedMap]);
 
   // Prepare tasks for Notion sync
   const tasksForNotion = useMemo(() => {
@@ -304,95 +346,116 @@ export default function AssignmentList({
     <div className="space-y-6">
       
       {/* Top Filter and Actions Bar */}
-      <div className="card p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        
-        {/* Filters */}
-        <div className="flex flex-wrap items-center gap-3">
-          {showFilters ? (
-            <>
-              {/* Branch Select */}
-              <select
-                value={branchId}
-                onChange={e => handleBranchChange(e.target.value)}
-                className="select-field text-xs py-2 min-w-[190px]"
-              >
-                <option value={0}>Select Branch</option>
-                {branches.map(b => (
-                  <option key={b.id} value={b.id}>
-                    {b.code} — {b.name}
-                  </option>
-                ))}
-              </select>
+      <div className="card p-4 sm:p-5 space-y-3.5">
+        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3.5">
+          {/* Left: Branch, Year and Priority Filters */}
+          <div className="flex flex-wrap items-center gap-2.5">
+            {showFilters ? (
+              <>
+                {/* Branch Select */}
+                <div className="relative min-w-[170px]">
+                  <select
+                    value={branchId}
+                    onChange={e => handleBranchChange(e.target.value)}
+                    className="select-field text-xs pl-3.5 pr-9 py-2 w-full font-medium text-slate-700"
+                  >
+                    <option value={0}>Select Branch</option>
+                    {branches.map(b => (
+                      <option key={b.id} value={b.id}>
+                        {b.code} — {b.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-              {/* Year Select */}
-              <select
-                value={year}
-                onChange={e => handleYearChange(parseInt(e.target.value))}
-                className="select-field text-xs py-2 min-w-[150px]"
-              >
-                {getAllowedYears(branchId).map(y => (
-                  <option key={y.value} value={y.value}>{y.label}</option>
-                ))}
-              </select>
-            </>
-          ) : (
-            <div className="flex items-center gap-2">
-              <span className="badge badge-lecture text-xs font-bold py-1 px-2.5">
-                {branches.find(b => String(b.id || (b as any)._id) === String(branchId))?.code || 'Branch'} • Year {year}
-              </span>
-              {section && (
-                <span className="badge badge-lab text-xs font-semibold py-1 px-2">
-                  Sec {section}
+                {/* Year Select */}
+                <div className="relative min-w-[140px]">
+                  <select
+                    value={year}
+                    onChange={e => handleYearChange(parseInt(e.target.value))}
+                    className="select-field text-xs pl-3.5 pr-9 py-2 w-full font-medium text-slate-700"
+                  >
+                    {getAllowedYears(branchId).map(y => (
+                      <option key={y.value} value={y.value}>{y.label}</option>
+                    ))}
+                  </select>
+                </div>
+              </>
+            ) : (
+              <div className="flex items-center gap-2">
+                <span className="badge badge-lecture text-xs font-bold py-1 px-2.5">
+                  {branches.find(b => String(b.id || (b as any)._id) === String(branchId))?.code || 'Branch'} • Year {year}
                 </span>
-              )}
+                {section && (
+                  <span className="badge badge-lab text-xs font-semibold py-1 px-2">
+                    Sec {section}
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* Priority Filter */}
+            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
+              {['all', 'urgent', 'high', 'medium', 'low'].map(p => (
+                <button
+                  key={p}
+                  onClick={() => setSelectedPriority(p)}
+                  className={`text-[11px] px-2.5 py-1 rounded-lg capitalize transition-all ${
+                    selectedPriority === p
+                      ? 'bg-white text-slate-900 font-semibold shadow-2xs'
+                      : 'text-slate-500 hover:text-slate-900'
+                  }`}
+                >
+                  {p}
+                </button>
+              ))}
             </div>
-          )}
+          </div>
 
-          {/* Priority Filter */}
-          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
-            {['all', 'urgent', 'high', 'medium', 'low'].map(p => (
-              <button
-                key={p}
-                onClick={() => setSelectedPriority(p)}
-                className={`text-[11px] px-2.5 py-1 rounded-lg capitalize transition-all ${
-                  selectedPriority === p
-                    ? 'bg-white text-slate-900 font-semibold shadow-2xs'
-                    : 'text-slate-500 hover:text-slate-900'
-                }`}
+          {/* Right: Sort By, Search & Notion Sync */}
+          <div className="flex flex-wrap sm:flex-nowrap items-center gap-2.5">
+            {/* Sort Selector */}
+            <div className="relative min-w-[165px] flex-1 sm:flex-none">
+              <ArrowUpDown className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              <select
+                value={sortBy}
+                onChange={e => setSortBy(e.target.value as any)}
+                className="select-field text-xs pl-9 pr-9 py-2 w-full font-medium text-slate-700 bg-white"
               >
-                {p}
+                <option value="dueDate">Due Date (Closest)</option>
+                <option value="priority">Priority (Urgent)</option>
+                <option value="subject">Subject (A to Z)</option>
+                <option value="title">Title (A to Z)</option>
+              </select>
+            </div>
+
+            {/* Search Box */}
+            <div className="relative flex-1 sm:w-48">
+              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Search assignments..."
+                className="input-field text-xs pl-9 py-2"
+              />
+            </div>
+
+            {/* Notion Sync Button */}
+            {filteredAssignments.length > 0 && (
+              <button
+                onClick={() => setShowNotionModal(true)}
+                className="btn-secondary text-xs py-2 px-3 shrink-0 flex items-center gap-1.5"
+                title="Sync assignments to Notion"
+              >
+                <span className="w-3.5 h-3.5 rounded bg-slate-900 text-white flex items-center justify-center font-bold text-[9px]">
+                  N
+                </span>
+                <span>Sync Notion</span>
               </button>
-            ))}
+            )}
           </div>
         </div>
-
-        {/* Search & Notion Sync Button */}
-        <div className="flex items-center gap-3">
-          <div className="relative flex-1 md:w-52">
-            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Search assignments..."
-              className="input-field text-xs pl-8 py-2"
-            />
-          </div>
-
-          {filteredAssignments.length > 0 && (
-            <button
-              onClick={() => setShowNotionModal(true)}
-              className="btn-secondary text-xs py-2 px-3 shrink-0 flex items-center gap-1.5"
-              title="Sync assignments to Notion"
-            >
-              <span className="w-3.5 h-3.5 rounded bg-slate-900 text-white flex items-center justify-center font-bold text-[9px]">
-                N
-              </span>
-              <span>Sync Notion</span>
-            </button>
-          )}
-        </div>
-
       </div>
 
       {/* Assignment Cards Grid */}

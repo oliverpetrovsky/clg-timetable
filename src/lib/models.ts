@@ -186,6 +186,46 @@ const BatchSchema = new Schema<IBatch>(
 
 BatchSchema.index({ branchId: 1, year: 1, section: 1 }, { unique: true });
 
+// ================= QUIZ =================
+export interface IQuiz extends Document {
+  branchId: mongoose.Types.ObjectId;
+  year: number;
+  section?: string;
+  subject: string;
+  title: string;
+  description?: string;
+  date: string;
+  time?: string;
+  room?: string;
+  totalMarks?: number;
+  weightage?: string;
+  topics?: string[];
+  status: 'upcoming' | 'completed' | 'cancelled';
+  createdBy?: mongoose.Types.ObjectId;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const QuizSchema = new Schema<IQuiz>(
+  {
+    branchId: { type: Schema.Types.ObjectId, ref: 'Branch', required: true, index: true },
+    year: { type: Number, required: true },
+    section: { type: String },
+    subject: { type: String, required: true },
+    title: { type: String, required: true },
+    description: { type: String },
+    date: { type: String, required: true },
+    time: { type: String },
+    room: { type: String },
+    totalMarks: { type: Number },
+    weightage: { type: String },
+    topics: [{ type: String }],
+    status: { type: String, enum: ['upcoming', 'completed', 'cancelled'], default: 'upcoming' },
+    createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
+  },
+  { timestamps: { createdAt: 'createdAt', updatedAt: 'updatedAt' } }
+);
+
 // Prevent re-compilation in development HMR
 export const Branch: Model<IBranch> = mongoose.models.Branch || mongoose.model<IBranch>('Branch', BranchSchema);
 export const Batch: Model<IBatch> = mongoose.models.Batch || mongoose.model<IBatch>('Batch', BatchSchema);
@@ -194,4 +234,5 @@ export const TimetableEntry: Model<ITimetableEntry> = mongoose.models.TimetableE
 export const Assignment: Model<IAssignment> = mongoose.models.Assignment || mongoose.model<IAssignment>('Assignment', AssignmentSchema);
 export const AssignmentTracking: Model<IAssignmentTracking> = mongoose.models.AssignmentTracking || mongoose.model<IAssignmentTracking>('AssignmentTracking', AssignmentTrackingSchema);
 export const Notification: Model<INotification> = mongoose.models.Notification || mongoose.model<INotification>('Notification', NotificationSchema);
+export const Quiz: Model<IQuiz> = mongoose.models.Quiz || mongoose.model<IQuiz>('Quiz', QuizSchema);
 

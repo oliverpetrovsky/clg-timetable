@@ -493,7 +493,7 @@ export default function PersonalTaskList({
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               placeholder="Search personal tasks..."
-              className="input-field text-xs pl-8 py-2"
+              className="input-field text-xs pl-9 py-2"
             />
           </div>
 
@@ -504,7 +504,7 @@ export default function PersonalTaskList({
               <select
                 value={selectedSubject}
                 onChange={e => setSelectedSubject(e.target.value)}
-                className="select-field text-xs pl-8 py-2 w-full font-medium"
+                className="select-field text-xs pl-9 py-2 w-full font-medium text-slate-700"
               >
                 <option value="all">All Subjects ({tasks.length})</option>
                 {dynamicSubjects.map(sub => {
@@ -521,7 +521,7 @@ export default function PersonalTaskList({
             {selectedSubject !== 'all' && (
               <button
                 onClick={() => setSelectedSubject('all')}
-                className="p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors shrink-0"
+                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors shrink-0"
                 title="Clear subject filter"
               >
                 <X className="w-3.5 h-3.5" />
@@ -530,18 +530,18 @@ export default function PersonalTaskList({
           </div>
 
           {/* Sort By Selector */}
-          <div className="md:col-span-4 flex items-center gap-1.5 justify-end">
-            <div className="relative flex-1 sm:max-w-[220px]">
+          <div className="md:col-span-4 flex items-center justify-end">
+            <div className="relative w-full">
               <ArrowUpDown className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
               <select
                 value={sortBy}
                 onChange={e => setSortBy(e.target.value as any)}
-                className="select-field text-xs pl-8 py-2 w-full font-medium bg-slate-50/60"
+                className="select-field text-xs pl-9 py-2 w-full font-medium text-slate-700 bg-white"
               >
-                <option value="priority">🔥 Sort: Priority (Urgent first)</option>
-                <option value="dueDate">📅 Sort: Due Date (Closest first)</option>
-                <option value="newest">⚡ Sort: Newest Added</option>
-                <option value="title">🔤 Sort: Alphabetical (A-Z)</option>
+                <option value="priority">Priority (Urgent first)</option>
+                <option value="dueDate">Due Date (Closest first)</option>
+                <option value="newest">Newest Added</option>
+                <option value="title">Title (A to Z)</option>
               </select>
             </div>
           </div>

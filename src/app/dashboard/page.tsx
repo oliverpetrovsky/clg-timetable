@@ -7,6 +7,7 @@ import AssignmentList from '../components/AssignmentList';
 import NotionSyncModal from '../components/NotionSyncModal';
 import NotionWidget from '../components/NotionWidget';
 import PersonalTaskList, { CustomTask } from '../components/PersonalTaskList';
+import QuizList from '../components/QuizList';
 import { 
   Bell, 
   Calendar, 
@@ -22,7 +23,8 @@ import {
   RefreshCw,
   GraduationCap,
   ArrowRight,
-  TrendingUp
+  TrendingUp,
+  Award
 } from 'lucide-react';
 
 interface User {
@@ -49,13 +51,14 @@ interface Notification {
 export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [activeTab, setActiveTab] = useState<'tasks' | 'timetable' | 'assignments' | 'notifications'>('tasks');
+  const [activeTab, setActiveTab] = useState<'tasks' | 'quizzes' | 'timetable' | 'assignments' | 'notifications'>('tasks');
   const [loading, setLoading] = useState(true);
   const [showNotionModal, setShowNotionModal] = useState(false);
   const [customTasks, setCustomTasks] = useState<CustomTask[]>([]);
   const [showAddTask, setShowAddTask] = useState(false);
   const [assignmentCount, setAssignmentCount] = useState(0);
   const [completedAssignmentCount, setCompletedAssignmentCount] = useState(0);
+  const [quizCount, setQuizCount] = useState(0);
 
   const router = useRouter();
 
@@ -200,30 +203,48 @@ export default function DashboardPage() {
         </div>
 
         {/* Progress & Overview Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3.5">
           
           {/* Task Completion Metric */}
-          <div className="card p-5 flex items-center justify-between">
+          <div className="card p-4 sm:p-5 flex items-center justify-between">
             <div className="space-y-1">
               <span className="text-xs font-medium text-slate-500">Overall Progress</span>
               <div className="flex items-baseline gap-2">
                 <span className="text-2xl font-bold text-slate-900">{progressPercent}%</span>
                 <span className="text-xs text-slate-400">{completedTasks}/{totalTasks} done</span>
               </div>
-              <div className="w-32 h-1.5 bg-slate-100 rounded-full overflow-hidden mt-2">
+              <div className="w-28 h-1.5 bg-slate-100 rounded-full overflow-hidden mt-1.5">
                 <div
                   className="h-full bg-emerald-500 rounded-full transition-all duration-500"
                   style={{ width: `${progressPercent}%` }}
                 />
               </div>
             </div>
-            <div className="w-11 h-11 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
               <CheckCircle2 className="w-5 h-5" />
             </div>
           </div>
 
+          {/* Upcoming Quizzes Metric Card */}
+          <div 
+            onClick={() => setActiveTab('quizzes')}
+            className="card p-4 sm:p-5 flex items-center justify-between cursor-pointer hover:border-purple-300 hover:shadow-2xs transition-all"
+          >
+            <div className="space-y-1">
+              <span className="text-xs font-medium text-slate-500">Upcoming Quizzes</span>
+              <p className="text-2xl font-bold text-slate-900">{quizCount}</p>
+              <p className="text-[11px] text-purple-600 font-medium">Tests & Exams</p>
+            </div>
+            <div className="w-10 h-10 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center">
+              <GraduationCap className="w-5 h-5" />
+            </div>
+          </div>
+
           {/* Active Assignments */}
-          <div className="card p-5 flex items-center justify-between">
+          <div 
+            onClick={() => setActiveTab('assignments')}
+            className="card p-4 sm:p-5 flex items-center justify-between cursor-pointer hover:border-blue-300 hover:shadow-2xs transition-all"
+          >
             <div className="space-y-1">
               <span className="text-xs font-medium text-slate-500">Course Assignments</span>
               <p className="text-2xl font-bold text-slate-900">{assignmentCount}</p>
@@ -231,19 +252,22 @@ export default function DashboardPage() {
                 {user.branch_code || 'Branch'} • Year {user.year || 1} Sec {user.section || 'A'}
               </p>
             </div>
-            <div className="w-11 h-11 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
               <BookOpen className="w-5 h-5" />
             </div>
           </div>
 
           {/* Personal Tasks */}
-          <div className="card p-5 flex items-center justify-between">
+          <div 
+            onClick={() => setActiveTab('tasks')}
+            className="card p-4 sm:p-5 flex items-center justify-between cursor-pointer hover:border-slate-300 hover:shadow-2xs transition-all"
+          >
             <div className="space-y-1">
               <span className="text-xs font-medium text-slate-500">Personal Tasks</span>
               <p className="text-2xl font-bold text-slate-900">{customTasks.length}</p>
               <p className="text-[11px] text-slate-400">Synced to device</p>
             </div>
-            <div className="w-11 h-11 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-2xl bg-slate-100 text-slate-700 flex items-center justify-center">
               <Layers className="w-5 h-5" />
             </div>
           </div>
@@ -251,17 +275,17 @@ export default function DashboardPage() {
           {/* Notion Sync Status */}
           <div 
             onClick={() => setShowNotionModal(true)}
-            className="card p-5 flex items-center justify-between cursor-pointer hover:border-slate-300 transition-colors"
+            className="card p-4 sm:p-5 flex items-center justify-between cursor-pointer hover:border-slate-300 hover:shadow-2xs transition-all"
           >
             <div className="space-y-1">
-              <span className="text-xs font-medium text-slate-500">Notion Integration</span>
+              <span className="text-xs font-medium text-slate-500">Notion Sync</span>
               <p className="text-xs font-semibold text-slate-900 flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-emerald-500" />
                 Active Database
               </p>
               <p className="text-[11px] text-slate-400 hover:text-slate-900 underline">Configure sync</p>
             </div>
-            <div className="w-11 h-11 rounded-2xl bg-slate-900 text-white flex items-center justify-center font-bold text-sm">
+            <div className="w-10 h-10 rounded-2xl bg-slate-900 text-white flex items-center justify-center font-bold text-sm">
               N
             </div>
           </div>
@@ -269,17 +293,17 @@ export default function DashboardPage() {
         </div>
 
         {/* Dashboard Tabs Bar */}
-        <div className="flex items-center gap-1 bg-slate-200/60 p-1 rounded-2xl max-w-xl">
+        <div className="flex items-center gap-1 bg-slate-200/60 p-1 rounded-2xl max-w-2xl overflow-x-auto scrollbar-none">
           <button
             onClick={() => setActiveTab('tasks')}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-medium transition-all ${
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-medium transition-all shrink-0 ${
               activeTab === 'tasks'
                 ? 'bg-white text-slate-900 font-semibold shadow-2xs'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
             <Layers className="w-3.5 h-3.5" />
-            <span>My Work & Tasks</span>
+            <span>My Tasks</span>
             {customTasks.length > 0 && (
               <span className="text-[10px] bg-slate-100 text-slate-700 px-1.5 py-0.2 rounded-full font-bold">
                 {customTasks.length}
@@ -288,32 +312,49 @@ export default function DashboardPage() {
           </button>
 
           <button
+            onClick={() => setActiveTab('quizzes')}
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-medium transition-all shrink-0 ${
+              activeTab === 'quizzes'
+                ? 'bg-white text-slate-900 font-semibold shadow-2xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <GraduationCap className="w-3.5 h-3.5 text-purple-600" />
+            <span>Quizzes</span>
+            {quizCount > 0 && (
+              <span className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.2 rounded-full font-bold">
+                {quizCount}
+              </span>
+            )}
+          </button>
+
+          <button
             onClick={() => setActiveTab('timetable')}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-medium transition-all ${
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-medium transition-all shrink-0 ${
               activeTab === 'timetable'
                 ? 'bg-white text-slate-900 font-semibold shadow-2xs'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <Calendar className="w-3.5 h-3.5" />
-            <span>My Timetable</span>
+            <Calendar className="w-3.5 h-3.5 text-blue-600" />
+            <span>Timetable</span>
           </button>
 
           <button
             onClick={() => setActiveTab('assignments')}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-medium transition-all ${
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-medium transition-all shrink-0 ${
               activeTab === 'assignments'
                 ? 'bg-white text-slate-900 font-semibold shadow-2xs'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <BookOpen className="w-3.5 h-3.5" />
+            <BookOpen className="w-3.5 h-3.5 text-amber-600" />
             <span>Assignments</span>
           </button>
 
           <button
             onClick={() => setActiveTab('notifications')}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-medium transition-all relative ${
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-medium transition-all relative shrink-0 ${
               activeTab === 'notifications'
                 ? 'bg-white text-slate-900 font-semibold shadow-2xs'
                 : 'text-slate-600 hover:text-slate-900'
@@ -387,7 +428,20 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Tab 2: My Timetable */}
+        {/* Tab 2: Quizzes & Exams */}
+        {activeTab === 'quizzes' && (
+          <div className="animate-fade-in space-y-4">
+            <QuizList
+              initialBranchId={user.branchId || undefined}
+              initialYear={user.year || 1}
+              initialSection={user.section || 'A'}
+              showFilters={false}
+              onQuizCountChange={setQuizCount}
+            />
+          </div>
+        )}
+
+        {/* Tab 3: My Timetable (Daily, Weekly, Monthly) */}
         {activeTab === 'timetable' && (
           <div className="animate-fade-in space-y-4">
             <div className="flex items-center justify-between">
