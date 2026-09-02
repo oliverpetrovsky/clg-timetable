@@ -105,65 +105,27 @@ async function seed() {
   await db.collection('batches').insertMany(batchesData);
 
   // ============================================================
-  // 3. SECURE SUPER ADMIN & SYSTEM USERS
+  // 3. SECURE SUPER ADMIN ONLY
   // ============================================================
-  console.log('👥 Creating secure admin accounts from environment secrets...');
+  console.log('👥 Creating Super Admin account from environment secrets...');
 
-  const superAdminEmail = process.env.SUPER_ADMIN_EMAIL || 'classreps@iiitb.ac.in';
+  const superAdminEmail = (process.env.SUPER_ADMIN_EMAIL || 'classreps@iiitb.ac.in').toLowerCase().trim();
   const superAdminPassword =
     process.env.SUPER_ADMIN_PASSWORD ||
     process.env.SEED_ADMIN_PASSWORD ||
     'AdminSecure#2026!iiitbKey$99';
 
-  const branchAdminPassword =
-    process.env.SEED_BRANCH_PASSWORD || 'BranchAdmin#2026!iiitb';
-  const studentPassword =
-    process.env.SEED_STUDENT_PASSWORD || 'StudentSecure#2026!iiitb';
+  const superAdminHash = await bcrypt.hash(superAdminPassword, 12);
 
-  const [superAdminHash, branchAdminHash, studentHash] = await Promise.all([
-    bcrypt.hash(superAdminPassword, 12),
-    bcrypt.hash(branchAdminPassword, 12),
-    bcrypt.hash(studentPassword, 12),
-  ]);
+  const superAdminUser = await db.collection('users').insertOne({
+    name: 'IIIT-B Class Representatives Admin',
+    email: superAdminEmail,
+    passwordHash: superAdminHash,
+    role: 'superadmin',
+    createdAt: new Date(),
+  });
 
-  const usersData = [
-    // Superadmin: Class Representatives Admin
-    {
-      name: 'IIIT-B Class Representatives Admin',
-      email: superAdminEmail,
-      passwordHash: superAdminHash,
-      role: 'superadmin',
-      createdAt: new Date(),
-    },
-    // Department Admins
-    {
-      name: 'IIIT-B CSE Admin',
-      email: 'cse.admin@iiitb.ac.in',
-      passwordHash: branchAdminHash,
-      role: 'admin',
-      branchId: branchMap['CSE'],
-      createdAt: new Date(),
-    },
-    {
-      name: 'IIIT-B ECE Admin',
-      email: 'ece.admin@iiitb.ac.in',
-      passwordHash: branchAdminHash,
-      role: 'admin',
-      branchId: branchMap['ECE'],
-      createdAt: new Date(),
-    },
-    {
-      name: 'IIIT-B AI&DS Admin',
-      email: 'aids.admin@iiitb.ac.in',
-      passwordHash: branchAdminHash,
-      role: 'admin',
-      branchId: branchMap['AI&DS'],
-      createdAt: new Date(),
-    },
-  ];
-
-  const userDocs = await db.collection('users').insertMany(usersData);
-  const classRepAdminId = userDocs.insertedIds[0];
+  const classRepAdminId = superAdminUser.insertedId;
 
   // ============================================================
   // 4. OFFICIAL TIMETABLE SCHEDULE
