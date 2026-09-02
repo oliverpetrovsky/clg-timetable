@@ -94,7 +94,7 @@ export default function AdminPage() {
 
   // Selected filters for timetable & assignment management
   const [mgmtBranchId, setMgmtBranchId] = useState<string>('');
-  const [mgmtYear, setMgmtYear] = useState<number>(2);
+  const [mgmtYear, setMgmtYear] = useState<number>(1);
   const [mgmtSection, setMgmtSection] = useState<string>('A');
 
   // Loaded items

@@ -97,11 +97,11 @@ export default function LoginPage() {
               </button>
               <button
                 type="button"
-                onClick={() => fillQuickAccount('student@iiitb.ac.in', 'student123')}
+                onClick={() => fillQuickAccount('student.ece@iiitb.ac.in', 'student123')}
                 className="py-1.5 px-2 text-[11px] font-medium bg-white hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 border border-slate-200 rounded-xl transition-all text-slate-700 flex flex-col items-center shadow-xs"
               >
                 <span className="font-bold text-emerald-600">Student</span>
-                <span className="text-[9px] text-slate-400">CSE Y2</span>
+                <span className="text-[9px] text-slate-400">ECE Y1</span>
               </button>
             </div>
           </div>

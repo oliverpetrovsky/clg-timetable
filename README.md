@@ -66,13 +66,17 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ---
 
-## 🔑 Demo Accounts
+## 🔑 Demo Accounts (IIIT-B)
 
 | Role | Email | Password | Access |
 |------|-------|----------|--------|
-| 🔴 **Super Admin** | `admin@college.edu` | `admin123` | Full system control & user promotion |
-| 🟠 **CSE Admin** | `cse.admin@college.edu` | `branch123` | Manage CSE department timetable & assignments |
-| 🟢 **Demo Student** | `student@college.edu` | `student123` | CSE Year 2 — Personal dashboard & Notion sync |
+| 🔴 **Super Admin (CR)** | `classreps@iiitb.ac.in` | `tbsm-naamsujal-vichaar-Vy0m` | Full system control & user promotion |
+| 🟠 **ECE Admin** | `ece.admin@iiitb.ac.in` | `branch123` | Manage ECE department timetable & assignments |
+| 🟠 **CSE Admin** | `cse.admin@iiitb.ac.in` | `branch123` | Manage CSE department timetable & assignments |
+| 🟠 **AI&DS Admin** | `aids.admin@iiitb.ac.in` | `branch123` | Manage AI&DS department timetable & assignments |
+| 🟢 **ECE Student** | `student.ece@iiitb.ac.in` | `student123` | ECE Year 1 — Personal dashboard & Notion sync |
+| 🟢 **CSE Student** | `student.cse@iiitb.ac.in` | `student123` | CSE Year 1 — Personal dashboard & Notion sync |
+| 🟢 **AI&DS Student** | `student.aids@iiitb.ac.in` | `student123` | AI&DS Year 1 — Personal dashboard & Notion sync |
 
 ---
 

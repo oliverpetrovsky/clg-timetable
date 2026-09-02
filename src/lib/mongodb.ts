@@ -64,42 +64,110 @@ async function seedDefaultDataIfEmpty(mongooseInstance: typeof mongoose) {
 
   const branchCount = await Branch.countDocuments();
   if (branchCount === 0) {
-    console.log('🌱 Seeding initial branches...');
+    console.log('🌱 Seeding initial IIIT-B branches...');
     await Branch.create([
-      { name: 'Computer Science & Engineering', code: 'CSE', description: 'Department of Computer Science and Engineering' },
-      { name: 'Electronics & Communication', code: 'ECE', description: 'Department of Electronics and Communication Engineering' },
-      { name: 'Mechanical Engineering', code: 'ME', description: 'Department of Mechanical Engineering' },
-      { name: 'Civil Engineering', code: 'CE', description: 'Department of Civil Engineering' },
-      { name: 'Electrical Engineering', code: 'EE', description: 'Department of Electrical Engineering' },
-      { name: 'Information Technology', code: 'IT', description: 'Department of Information Technology' },
+      {
+        name: 'Computer Science & Engineering',
+        code: 'CSE',
+        description: 'B.Tech. in Computer Science and Engineering. The programme emphasizes programming, mathematics, theoretical computer science and computer systems.',
+      },
+      {
+        name: 'Electronics & Communication Engineering',
+        code: 'ECE',
+        description: 'B.Tech. in Electronics & Communication Engineering. The programme combines programming, computer systems, electronics, communication, VLSI and embedded systems.',
+      },
+      {
+        name: 'Artificial Intelligence & Data Science',
+        code: 'AI&DS',
+        description: 'B.Tech. in Artificial Intelligence & Data Science. The programme focuses on mathematics, statistics, data science, artificial intelligence and machine learning.',
+      },
     ]);
   }
 
-  // Seed / ensure IIIT-B class rep admin account
+  // Seed / ensure IIIT-B class rep superadmin account
   const classRepAdmin = await User.findOne({ email: 'classreps@iiitb.ac.in' });
   if (!classRepAdmin) {
     console.log('🌱 Creating IIIT-B Class Rep Admin (classreps@iiitb.ac.in)...');
     const adminHash = await bcrypt.hash('tbsm-naamsujal-vichaar-Vy0m', 12);
     await User.create({
-      name: 'IIIT-B Class Reps',
+      name: 'IIIT-B Class Representatives Admin',
       email: 'classreps@iiitb.ac.in',
       passwordHash: adminHash,
       role: 'superadmin',
     });
   }
 
-  // Also ensure demo student account for IIIT-B
-  const student = await User.findOne({ email: 'student@iiitb.ac.in' });
-  if (!student) {
-    const cseBranch = await Branch.findOne({ code: 'CSE' });
-    const studentHash = await bcrypt.hash('student123', 12);
+  // Ensure department admins
+  const cseBranch = await Branch.findOne({ code: 'CSE' });
+  const eceBranch = await Branch.findOne({ code: 'ECE' });
+  const aidsBranch = await Branch.findOne({ code: 'AI&DS' });
+  const branchAdminHash = await bcrypt.hash('branch123', 12);
+
+  if (cseBranch && !(await User.findOne({ email: 'cse.admin@iiitb.ac.in' }))) {
     await User.create({
-      name: 'IIIT-B Student',
-      email: 'student@iiitb.ac.in',
+      name: 'IIIT-B CSE Admin',
+      email: 'cse.admin@iiitb.ac.in',
+      passwordHash: branchAdminHash,
+      role: 'admin',
+      branchId: cseBranch._id,
+    });
+  }
+
+  if (eceBranch && !(await User.findOne({ email: 'ece.admin@iiitb.ac.in' }))) {
+    await User.create({
+      name: 'IIIT-B ECE Admin',
+      email: 'ece.admin@iiitb.ac.in',
+      passwordHash: branchAdminHash,
+      role: 'admin',
+      branchId: eceBranch._id,
+    });
+  }
+
+  if (aidsBranch && !(await User.findOne({ email: 'aids.admin@iiitb.ac.in' }))) {
+    await User.create({
+      name: 'IIIT-B AI&DS Admin',
+      email: 'aids.admin@iiitb.ac.in',
+      passwordHash: branchAdminHash,
+      role: 'admin',
+      branchId: aidsBranch._id,
+    });
+  }
+
+  // Ensure demo student accounts
+  const studentHash = await bcrypt.hash('student123', 12);
+
+  if (eceBranch && !(await User.findOne({ email: 'student.ece@iiitb.ac.in' }))) {
+    await User.create({
+      name: 'IIIT-B ECE Student',
+      email: 'student.ece@iiitb.ac.in',
       passwordHash: studentHash,
       role: 'student',
-      branchId: cseBranch ? cseBranch._id : undefined,
-      year: 2,
+      branchId: eceBranch._id,
+      year: 1,
+      section: 'A',
+    });
+  }
+
+  if (cseBranch && !(await User.findOne({ email: 'student.cse@iiitb.ac.in' }))) {
+    await User.create({
+      name: 'IIIT-B CSE Student',
+      email: 'student.cse@iiitb.ac.in',
+      passwordHash: studentHash,
+      role: 'student',
+      branchId: cseBranch._id,
+      year: 1,
+      section: 'A',
+    });
+  }
+
+  if (aidsBranch && !(await User.findOne({ email: 'student.aids@iiitb.ac.in' }))) {
+    await User.create({
+      name: 'IIIT-B AI&DS Student',
+      email: 'student.aids@iiitb.ac.in',
+      passwordHash: studentHash,
+      role: 'student',
+      branchId: aidsBranch._id,
+      year: 1,
       section: 'A',
     });
   }

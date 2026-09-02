@@ -154,7 +154,7 @@ export default function Home() {
                       <span className="w-2.5 h-2.5 rounded-full bg-emerald-400/80" />
                     </div>
                     <span className="text-xs font-mono text-slate-500 ml-2 font-medium">
-                      CSE Year 2 • Section A Schedule
+                      CSE Year 1 • Section A Schedule
                     </span>
                   </div>
                   <a
@@ -170,25 +170,25 @@ export default function Home() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <a href="/timetable" className="card p-4 bg-white border-blue-200/80 ring-1 ring-blue-500/10 hover:shadow-md transition-all">
                     <span className="badge badge-lecture text-[10px]">Lecture</span>
-                    <h4 className="font-semibold text-sm text-slate-900 mt-2">Data Structures & Algorithms</h4>
+                    <h4 className="font-semibold text-sm text-slate-900 mt-2">Mathematics – 1 (Linear Algebra)</h4>
                     <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
-                      <Clock className="w-3 h-3" /> 09:00 - 10:00 AM • Room 301
+                      <Clock className="w-3 h-3" /> 09:00 - 10:00 AM • Academic Block
                     </p>
                   </a>
 
                   <a href="/timetable" className="card p-4 bg-white border-purple-200/80 hover:shadow-md transition-all">
-                    <span className="badge badge-tutorial text-[10px]">Tutorial</span>
-                    <h4 className="font-semibold text-sm text-slate-900 mt-2">Discrete Mathematics</h4>
+                    <span className="badge badge-tutorial text-[10px]">Lecture</span>
+                    <h4 className="font-semibold text-sm text-slate-900 mt-2">Programming 1A (C)</h4>
                     <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
-                      <Clock className="w-3 h-3" /> 10:00 - 11:00 AM • Room 302
+                      <Clock className="w-3 h-3" /> 10:00 - 11:00 AM • Academic Block
                     </p>
                   </a>
 
                   <a href="/timetable" className="card p-4 bg-white border-emerald-200/80 hover:shadow-md transition-all">
                     <span className="badge badge-lab text-[10px]">Lab Session</span>
-                    <h4 className="font-semibold text-sm text-slate-900 mt-2">DSA Practical Lab</h4>
+                    <h4 className="font-semibold text-sm text-slate-900 mt-2">Programming Lab</h4>
                     <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
-                      <Clock className="w-3 h-3" /> 01:00 - 03:00 PM • Lab 201
+                      <Clock className="w-3 h-3" /> 02:00 - 04:00 PM • Lab 201
                     </p>
                   </a>
                 </div>
