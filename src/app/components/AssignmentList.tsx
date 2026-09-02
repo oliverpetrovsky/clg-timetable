@@ -64,6 +64,7 @@ export default function AssignmentList({
   onTrackChange,
 }: AssignmentListProps) {
   const [branches, setBranches] = useState<Branch[]>([]);
+  const [batches, setBatches] = useState<any[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [branchId, setBranchId] = useState(initialBranchId || 0);
   const [year, setYear] = useState(initialYear || 1);
@@ -73,38 +74,84 @@ export default function AssignmentList({
   const [trackedMap, setTrackedMap] = useState<Record<number, string>>({});
   const [showNotionModal, setShowNotionModal] = useState(false);
 
-  // Fetch branches and load preference from cookies
+  // Fetch branches and batches, load preference from cookies
   useEffect(() => {
-    fetch('/api/branches')
-      .then(res => res.json())
-      .then(data => {
-        const list = data.branches || [];
-        setBranches(list);
+    Promise.all([
+      fetch('/api/branches').then(res => res.json()),
+      fetch('/api/batches').then(res => res.json()),
+    ]).then(([branchData, batchData]) => {
+      const list = branchData.branches || [];
+      setBranches(list);
+      setBatches(batchData.batches || []);
 
-        if (!initialBranchId && list.length > 0) {
-          try {
-            const match = document.cookie.match(/clg_timetable_pref=([^;]+)/);
-            const savedStr = match ? decodeURIComponent(match[1]) : localStorage.getItem('clg_timetable_pref');
-            if (savedStr) {
-              const saved = JSON.parse(savedStr);
-              if (saved.branchId && list.some((b: any) => String(b.id) === String(saved.branchId) || String(b._id) === String(saved.branchId))) {
-                setBranchId(saved.branchId);
-                if (saved.year) setYear(Number(saved.year));
-                return;
-              }
+      if (!initialBranchId && list.length > 0) {
+        try {
+          const match = document.cookie.match(/clg_timetable_pref=([^;]+)/);
+          const savedStr = match ? decodeURIComponent(match[1]) : localStorage.getItem('clg_timetable_pref');
+          if (savedStr) {
+            const saved = JSON.parse(savedStr);
+            if (saved.branchId && list.some((b: any) => String(b.id) === String(saved.branchId) || String(b._id) === String(saved.branchId))) {
+              setBranchId(saved.branchId);
+              if (saved.year) setYear(Number(saved.year));
+              return;
             }
-          } catch {}
-          setBranchId(list[0].id || list[0]._id);
+          }
+        } catch {}
+        setBranchId(list[0].id || list[0]._id);
+      }
+    });
+  }, [initialBranchId]);
+
+  const getBranchCode = (bId: any) => {
+    const b = branches.find(item => String(item.id || (item as any)._id) === String(bId));
+    return b ? b.code : '';
+  };
+
+  const getAllowedYears = (bId: any) => {
+    const branchBatches = batches.filter(
+      b => String(b.branchId) === String(bId) && b.isActive !== false
+    );
+    if (branchBatches.length > 0) {
+      const yearMap = new Map<number, string>();
+      branchBatches.forEach(b => {
+        if (!yearMap.has(b.year)) {
+          yearMap.set(b.year, `Year ${b.year} (${b.programme})`);
         }
       });
-  }, [initialBranchId]);
+      return Array.from(yearMap.entries())
+        .sort(([y1], [y2]) => y1 - y2)
+        .map(([value, label]) => ({ value, label }));
+    }
+
+    const code = getBranchCode(bId);
+    if (code === 'AI&DS') {
+      return [
+        { value: 1, label: 'Year 1' },
+        { value: 2, label: 'Year 2' },
+        { value: 3, label: 'Year 3' },
+      ];
+    }
+    return [
+      { value: 1, label: 'Year 1' },
+      { value: 2, label: 'Year 2' },
+      { value: 3, label: 'Year 3' },
+      { value: 4, label: 'Year 4 (iMTech)' },
+      { value: 5, label: 'Year 5 (iMTech)' },
+    ];
+  };
 
   const handleBranchChange = (newBranchId: any) => {
     setBranchId(newBranchId);
+    const allowed = getAllowedYears(newBranchId);
+    let newYear = year;
+    if (!allowed.some(y => y.value === newYear)) {
+      newYear = allowed[0]?.value || 1;
+      setYear(newYear);
+    }
     try {
       const match = document.cookie.match(/clg_timetable_pref=([^;]+)/);
       const existing = match ? JSON.parse(decodeURIComponent(match[1])) : {};
-      const updated = JSON.stringify({ ...existing, branchId: newBranchId, year });
+      const updated = JSON.stringify({ ...existing, branchId: newBranchId, year: newYear });
       document.cookie = `clg_timetable_pref=${encodeURIComponent(updated)}; path=/; max-age=31536000; SameSite=Lax`;
       localStorage.setItem('clg_timetable_pref', updated);
     } catch {}
@@ -249,10 +296,10 @@ export default function AssignmentList({
               <select
                 value={year}
                 onChange={e => handleYearChange(parseInt(e.target.value))}
-                className="select-field text-xs py-2 w-28"
+                className="select-field text-xs py-2 min-w-[150px]"
               >
-                {[1, 2, 3, 4].map(y => (
-                  <option key={y} value={y}>Year {y}</option>
+                {getAllowedYears(branchId).map(y => (
+                  <option key={y.value} value={y.value}>{y.label}</option>
                 ))}
               </select>
             </>
