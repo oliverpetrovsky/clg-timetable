@@ -3,3 +3,7 @@
 - edit tasks option :: solved ::
 - when more than 5 tasks done remove task with cool fade animation :: solved ::
 - dashboard should show assignments :: solved ::
+- fix sort dropdown styling for assignments and tasks :: solved ::
+- add upcoming quizes and exam tracking :: solved ::
+- weekly timetable matrix view :: solved ::
+- monthly schedule & academic calendar view :: solved ::
