@@ -1,4 +1,5 @@
-- sort personal tasks as per priority order
-- edit tasks option
-- when more than 5 tasks done remove task with animation
-- dashboard should show assignments
+- sort personal tasks as per priority order :: solved ::
+- option to sort by due date & filter by subject :: solved ::
+- edit tasks option :: solved ::
+- when more than 5 tasks done remove task with cool fade animation :: solved ::
+- dashboard should show assignments :: solved ::

@@ -123,3 +123,61 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
+
+/* Cool Task Fade Out & Disintegrate Animation */
+@keyframes taskFadeOut {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    max-height: 160px;
+    margin-bottom: 0.5rem;
+    box-shadow: 0 4px 12px -2px rgba(16, 185, 129, 0.2);
+    border-color: rgba(16, 185, 129, 0.4);
+    filter: blur(0px);
+  }
+  30% {
+    opacity: 0.85;
+    transform: translateX(8px) scale(0.98);
+    background-color: rgb(240 253 244 / 0.9);
+    filter: blur(0.2px);
+  }
+  60% {
+    opacity: 0.4;
+    transform: translateX(20px) scale(0.94);
+    filter: blur(0.8px);
+  }
+  85% {
+    opacity: 0.1;
+    transform: translateX(35px) scale(0.88);
+    max-height: 80px;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(45px) scale(0.8);
+    max-height: 0px;
+    padding-top: 0;
+    padding-bottom: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+    border-width: 0;
+    overflow: hidden;
+  }
+}
+
+.animate-task-fade-out {
+  animation: taskFadeOut 0.75s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  pointer-events: none;
+}
+
+@keyframes celebrateGlow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
+  50% {
+    box-shadow: 0 0 20px 4px rgba(16, 185, 129, 0.25);
+  }
+}
+
+.celebrate-pulse {
+  animation: celebrateGlow 1.2s ease-in-out infinite;
+}

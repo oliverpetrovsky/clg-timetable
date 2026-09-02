@@ -6,6 +6,7 @@ import TimetableView from '../components/TimetableView';
 import AssignmentList from '../components/AssignmentList';
 import NotionSyncModal from '../components/NotionSyncModal';
 import NotionWidget from '../components/NotionWidget';
+import PersonalTaskList, { CustomTask } from '../components/PersonalTaskList';
 import { 
   Bell, 
   Calendar, 
@@ -45,15 +46,6 @@ interface Notification {
   created_at: string;
 }
 
-interface CustomTask {
-  id: string;
-  title: string;
-  subject: string;
-  dueDate: string;
-  priority: 'low' | 'medium' | 'high' | 'urgent';
-  completed: boolean;
-}
-
 export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -62,10 +54,6 @@ export default function DashboardPage() {
   const [showNotionModal, setShowNotionModal] = useState(false);
   const [customTasks, setCustomTasks] = useState<CustomTask[]>([]);
   const [showAddTask, setShowAddTask] = useState(false);
-  const [newTaskTitle, setNewTaskTitle] = useState('');
-  const [newTaskSubject, setNewTaskSubject] = useState('');
-  const [newTaskDueDate, setNewTaskDueDate] = useState('');
-  const [newTaskPriority, setNewTaskPriority] = useState<'low' | 'medium' | 'high' | 'urgent'>('medium');
   const [assignmentCount, setAssignmentCount] = useState(0);
   const [completedAssignmentCount, setCompletedAssignmentCount] = useState(0);
 
@@ -124,36 +112,6 @@ export default function DashboardPage() {
     try {
       localStorage.setItem('college_timetable_custom_tasks', JSON.stringify(tasks));
     } catch {}
-  };
-
-  const handleAddCustomTask = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newTaskTitle.trim()) return;
-
-    const task: CustomTask = {
-      id: `custom-${Date.now()}`,
-      title: newTaskTitle.trim(),
-      subject: newTaskSubject.trim() || 'Personal',
-      dueDate: newTaskDueDate || new Date().toISOString().split('T')[0],
-      priority: newTaskPriority,
-      completed: false,
-    };
-
-    saveCustomTasks([task, ...customTasks]);
-    setNewTaskTitle('');
-    setNewTaskSubject('');
-    setNewTaskDueDate('');
-    setShowAddTask(false);
-  };
-
-  const toggleCustomTask = (id: string) => {
-    const updated = customTasks.map(t => (t.id === id ? { ...t, completed: !t.completed } : t));
-    saveCustomTasks(updated);
-  };
-
-  const deleteCustomTask = (id: string) => {
-    const updated = customTasks.filter(t => t.id !== id);
-    saveCustomTasks(updated);
   };
 
   const markAllRead = async () => {
@@ -229,7 +187,10 @@ export default function DashboardPage() {
             </button>
 
             <button
-              onClick={() => setShowAddTask(true)}
+              onClick={() => {
+                setActiveTab('tasks');
+                setShowAddTask(true);
+              }}
               className="btn-primary text-xs py-2.5 px-4 shadow-sm flex items-center gap-1.5"
             >
               <Plus className="w-4 h-4" />
@@ -371,133 +332,17 @@ export default function DashboardPage() {
         {/* Tab 1: My Work & Tasks */}
         {activeTab === 'tasks' && (
           <div className="space-y-6 animate-fade-in">
-            
-            {/* Add Personal Task Modal / Inline Form */}
-            {showAddTask && (
-              <form onSubmit={handleAddCustomTask} className="card p-5 sm:p-6 bg-slate-50/70 border-slate-300 space-y-4 animate-slide-up">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-slate-900">Add Personal Task / To-Do</h3>
-                  <button type="button" onClick={() => setShowAddTask(false)} className="text-xs text-slate-500 hover:text-slate-800">Cancel</button>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-                  <input
-                    type="text"
-                    value={newTaskTitle}
-                    onChange={e => setNewTaskTitle(e.target.value)}
-                    placeholder="Task name (e.g. Read Chapter 4)"
-                    className="input-field text-xs sm:col-span-2"
-                    required
-                  />
-                  <input
-                    type="text"
-                    value={newTaskSubject}
-                    onChange={e => setNewTaskSubject(e.target.value)}
-                    placeholder="Subject (e.g. DSA, Math)"
-                    className="input-field text-xs"
-                  />
-                  <input
-                    type="date"
-                    value={newTaskDueDate}
-                    onChange={e => setNewTaskDueDate(e.target.value)}
-                    className="input-field text-xs"
-                  />
-                </div>
-                <div className="flex items-center justify-between pt-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-slate-500">Priority:</span>
-                    {(['low', 'medium', 'high', 'urgent'] as const).map(p => (
-                      <button
-                        type="button"
-                        key={p}
-                        onClick={() => setNewTaskPriority(p)}
-                        className={`text-xs px-2.5 py-1 rounded-lg capitalize border ${
-                          newTaskPriority === p ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-200'
-                        }`}
-                      >
-                        {p}
-                      </button>
-                    ))}
-                  </div>
-                  <button type="submit" className="btn-primary text-xs py-2 px-4">
-                    Save Task
-                  </button>
-                </div>
-              </form>
-            )}
-
             {/* Personal Tasks Section */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-base font-bold text-slate-900">Personal Tasks</h2>
-                  <p className="text-xs text-slate-500">Your private to-do items synced with your device & Notion</p>
-                </div>
-                <button
-                  onClick={() => setShowAddTask(true)}
-                  className="btn-secondary text-xs py-1.5 px-3 flex items-center gap-1"
-                >
-                  <Plus className="w-3.5 h-3.5" /> Add Task
-                </button>
-              </div>
-
-              {customTasks.length === 0 ? (
-                <div className="card p-8 text-center border-dashed">
-                  <p className="text-xs text-slate-500">No personal tasks yet. Click "Add Personal Task" to add your own to-dos.</p>
-                </div>
-              ) : (
-                <div className="grid gap-2">
-                  {customTasks.map(task => (
-                    <div
-                      key={task.id}
-                      className={`card p-4 flex items-center justify-between gap-3 transition-all ${
-                        task.completed ? 'bg-slate-50 opacity-65' : ''
-                      }`}
-                    >
-                      <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <button
-                          onClick={() => toggleCustomTask(task.id)}
-                          className={`w-5 h-5 rounded-lg border flex items-center justify-center transition-colors ${
-                            task.completed
-                              ? 'bg-emerald-600 border-emerald-600 text-white'
-                              : 'bg-white border-slate-300 hover:border-slate-500'
-                          }`}
-                        >
-                          {task.completed && <Check className="w-3.5 h-3.5" />}
-                        </button>
-                        <div className="min-w-0">
-                          <p className={`text-sm font-medium text-slate-900 truncate ${task.completed ? 'line-through text-slate-400' : ''}`}>
-                            {task.title}
-                          </p>
-                          <div className="flex items-center gap-2 text-xs text-slate-400 mt-0.5">
-                            <span className="badge badge-low text-[10px]">{task.subject}</span>
-                            <span>•</span>
-                            <span>Due {task.dueDate}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <span className={`badge text-[10px] ${
-                          task.priority === 'urgent' ? 'badge-urgent' :
-                          task.priority === 'high' ? 'badge-high' : 'badge-low'
-                        }`}>
-                          {task.priority}
-                        </span>
-                        <button
-                          onClick={() => deleteCustomTask(task.id)}
-                          className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            <PersonalTaskList
+              tasks={customTasks}
+              onTasksChange={saveCustomTasks}
+              onOpenNotionModal={() => setShowNotionModal(true)}
+              isAddFormOpen={showAddTask}
+              onToggleAddForm={setShowAddTask}
+            />
 
             {/* College Assignments Section */}
-            <div className="space-y-3 pt-4 border-t border-slate-200/80">
+            <div className="space-y-3 pt-6 border-t border-slate-200/80">
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
