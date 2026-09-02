@@ -110,9 +110,9 @@ export default function TimetableView({
       fetch('/api/batches').then(r => r.json()),
     ])
       .then(([branchData, batchData]) => {
-        const list = branchData.branches || [];
+        const list = (branchData.branches || []).filter((b: any) => ['CSE', 'ECE', 'AI&DS'].includes(b.code));
         setBranches(list);
-        setBatches(batchData.batches || []);
+        setBatches((batchData.batches || []).filter((b: any) => ['CSE', 'ECE', 'AI&DS'].includes(b.branchCode)));
 
         if (!initialBranchId && list.length > 0) {
           try {

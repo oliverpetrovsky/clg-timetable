@@ -80,9 +80,9 @@ export default function AssignmentList({
       fetch('/api/branches').then(res => res.json()),
       fetch('/api/batches').then(res => res.json()),
     ]).then(([branchData, batchData]) => {
-      const list = branchData.branches || [];
+      const list = (branchData.branches || []).filter((b: any) => ['CSE', 'ECE', 'AI&DS'].includes(b.code));
       setBranches(list);
-      setBatches(batchData.batches || []);
+      setBatches((batchData.batches || []).filter((b: any) => ['CSE', 'ECE', 'AI&DS'].includes(b.branchCode)));
 
       if (!initialBranchId && list.length > 0) {
         try {

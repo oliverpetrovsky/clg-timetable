@@ -62,57 +62,70 @@ async function seedDefaultDataIfEmpty(mongooseInstance: typeof mongoose) {
   const { Branch, Batch, User } = await import('./models');
   const bcrypt = await import('bcryptjs');
 
-  const branchCount = await Branch.countDocuments();
-  if (branchCount === 0) {
-    console.log('🌱 Seeding initial IIIT-B branches...');
-    await Branch.create([
-      {
-        name: 'Computer Science & Engineering',
-        code: 'CSE',
-        description: 'B.Tech. in Computer Science and Engineering. The programme emphasizes programming, mathematics, theoretical computer science and computer systems.',
-      },
-      {
-        name: 'Electronics & Communication Engineering',
-        code: 'ECE',
-        description: 'B.Tech. in Electronics & Communication Engineering. The programme combines programming, computer systems, electronics, communication, VLSI and embedded systems.',
-      },
-      {
-        name: 'Artificial Intelligence & Data Science',
-        code: 'AI&DS',
-        description: 'B.Tech. in Artificial Intelligence & Data Science. The programme focuses on mathematics, statistics, data science, artificial intelligence and machine learning.',
-      },
-    ]);
+  // 1. Purge any legacy branches from earlier database versions (CE, EE, ME, IT, etc.)
+  await Branch.deleteMany({ code: { $nin: ['CSE', 'ECE', 'AI&DS'] } });
+
+  // 2. Ensure only official IIIT-B branches exist
+  const officialBranches = [
+    {
+      name: 'Computer Science & Engineering',
+      code: 'CSE',
+      description: 'B.Tech. & iMTech in Computer Science and Engineering. Section A.',
+    },
+    {
+      name: 'Electronics & Communication Engineering',
+      code: 'ECE',
+      description: 'B.Tech. & iMTech in Electronics & Communication Engineering. Section B.',
+    },
+    {
+      name: 'Artificial Intelligence & Data Science',
+      code: 'AI&DS',
+      description: 'B.Tech. in Artificial Intelligence & Data Science. Section B.',
+    },
+  ];
+
+  for (const b of officialBranches) {
+    await Branch.findOneAndUpdate(
+      { code: b.code },
+      { $set: b },
+      { upsert: true, new: true }
+    );
   }
 
-  // Ensure department admins & branch objects
+  // Ensure branch objects
   const cseBranch = await Branch.findOne({ code: 'CSE' });
   const eceBranch = await Branch.findOne({ code: 'ECE' });
   const aidsBranch = await Branch.findOne({ code: 'AI&DS' });
 
-  // Seed academic batches collection if empty
-  const batchCount = await Batch.countDocuments();
-  if (batchCount === 0 && cseBranch && eceBranch && aidsBranch) {
-    console.log('🌱 Seeding IIIT-B academic batches collection...');
-    await Batch.create([
-      // CSE Batches (Section A)
-      { branchId: cseBranch._id, year: 1, section: 'A', programme: 'B.Tech & iMTech', name: 'CSE Year 1 (Section A)' },
-      { branchId: cseBranch._id, year: 2, section: 'A', programme: 'B.Tech & iMTech', name: 'CSE Year 2 (Section A)' },
-      { branchId: cseBranch._id, year: 3, section: 'A', programme: 'B.Tech & iMTech', name: 'CSE Year 3 (Section A)' },
-      { branchId: cseBranch._id, year: 4, section: 'A', programme: 'iMTech Only', name: 'CSE Year 4 (Section A - iMTech)' },
-      { branchId: cseBranch._id, year: 5, section: 'A', programme: 'iMTech Only', name: 'CSE Year 5 (Section A - iMTech)' },
+  // 3. Purge any legacy/invalid batches and seed official batches
+  if (cseBranch && eceBranch && aidsBranch) {
+    const validBranchIds = [cseBranch._id, eceBranch._id, aidsBranch._id];
+    await Batch.deleteMany({ branchId: { $nin: validBranchIds } });
 
-      // ECE Batches (Section B)
-      { branchId: eceBranch._id, year: 1, section: 'B', programme: 'B.Tech & iMTech', name: 'ECE Year 1 (Section B)' },
-      { branchId: eceBranch._id, year: 2, section: 'B', programme: 'B.Tech & iMTech', name: 'ECE Year 2 (Section B)' },
-      { branchId: eceBranch._id, year: 3, section: 'B', programme: 'B.Tech & iMTech', name: 'ECE Year 3 (Section B)' },
-      { branchId: eceBranch._id, year: 4, section: 'B', programme: 'iMTech Only', name: 'ECE Year 4 (Section B - iMTech)' },
-      { branchId: eceBranch._id, year: 5, section: 'B', programme: 'iMTech Only', name: 'ECE Year 5 (Section B - iMTech)' },
+    const batchCount = await Batch.countDocuments();
+    if (batchCount === 0) {
+      console.log('🌱 Seeding IIIT-B academic batches collection...');
+      await Batch.create([
+        // CSE Batches (Section A)
+        { branchId: cseBranch._id, year: 1, section: 'A', programme: 'B.Tech & iMTech', name: 'CSE Year 1 (Section A)', isActive: true },
+        { branchId: cseBranch._id, year: 2, section: 'A', programme: 'B.Tech & iMTech', name: 'CSE Year 2 (Section A)', isActive: true },
+        { branchId: cseBranch._id, year: 3, section: 'A', programme: 'B.Tech & iMTech', name: 'CSE Year 3 (Section A)', isActive: true },
+        { branchId: cseBranch._id, year: 4, section: 'A', programme: 'iMTech Only', name: 'CSE Year 4 (Section A - iMTech)', isActive: true },
+        { branchId: cseBranch._id, year: 5, section: 'A', programme: 'iMTech Only', name: 'CSE Year 5 (Section A - iMTech)', isActive: true },
 
-      // AI&DS Batches (Section B, Years 1-3 only)
-      { branchId: aidsBranch._id, year: 1, section: 'B', programme: 'B.Tech Only', name: 'AI&DS Year 1 (Section B)' },
-      { branchId: aidsBranch._id, year: 2, section: 'B', programme: 'B.Tech Only', name: 'AI&DS Year 2 (Section B)' },
-      { branchId: aidsBranch._id, year: 3, section: 'B', programme: 'B.Tech Only', name: 'AI&DS Year 3 (Section B)' },
-    ]);
+        // ECE Batches (Section B)
+        { branchId: eceBranch._id, year: 1, section: 'B', programme: 'B.Tech & iMTech', name: 'ECE Year 1 (Section B)', isActive: true },
+        { branchId: eceBranch._id, year: 2, section: 'B', programme: 'B.Tech & iMTech', name: 'ECE Year 2 (Section B)', isActive: true },
+        { branchId: eceBranch._id, year: 3, section: 'B', programme: 'B.Tech & iMTech', name: 'ECE Year 3 (Section B)', isActive: true },
+        { branchId: eceBranch._id, year: 4, section: 'B', programme: 'iMTech Only', name: 'ECE Year 4 (Section B - iMTech)', isActive: true },
+        { branchId: eceBranch._id, year: 5, section: 'B', programme: 'iMTech Only', name: 'ECE Year 5 (Section B - iMTech)', isActive: true },
+
+        // AI&DS Batches (Section B, Years 1-3 only)
+        { branchId: aidsBranch._id, year: 1, section: 'B', programme: 'B.Tech Only', name: 'AI&DS Year 1 (Section B)', isActive: true },
+        { branchId: aidsBranch._id, year: 2, section: 'B', programme: 'B.Tech Only', name: 'AI&DS Year 2 (Section B)', isActive: true },
+        { branchId: aidsBranch._id, year: 3, section: 'B', programme: 'B.Tech Only', name: 'AI&DS Year 3 (Section B)', isActive: true },
+      ]);
+    }
   }
 
   // Seed / ensure IIIT-B class rep superadmin account

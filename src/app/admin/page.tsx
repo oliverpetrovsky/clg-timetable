@@ -202,9 +202,9 @@ export default function AdminPage() {
         return;
       }
       setUser(userData.user);
-      const bList = branchData.branches || [];
+      const bList = (branchData.branches || []).filter((b: any) => ['CSE', 'ECE', 'AI&DS'].includes(b.code));
       setBranches(bList);
-      const batchList = batchData.batches || [];
+      const batchList = (batchData.batches || []).filter((b: any) => ['CSE', 'ECE', 'AI&DS'].includes(b.branchCode));
       setBatches(batchList);
 
       const defaultBranch = userData.user.role === 'admin' && userData.user.branchId
