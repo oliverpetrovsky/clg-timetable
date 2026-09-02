@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
 import { Branch } from '@/lib/models';
+import { ensureDatabaseBootstrapped } from '@/lib/bootstrap';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,6 +10,7 @@ const ALLOWED_BRANCH_CODES = ['CSE', 'ECE', 'AI&DS'];
 export async function GET() {
   try {
     await connectToDatabase();
+    await ensureDatabaseBootstrapped();
     const branchDocs = await Branch.find({ code: { $in: ALLOWED_BRANCH_CODES } })
       .sort({ code: 1 })
       .lean();

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
 import { Batch, Branch } from '@/lib/models';
 import { getCurrentUser } from '@/lib/auth';
+import { ensureDatabaseBootstrapped } from '@/lib/bootstrap';
 import mongoose from 'mongoose';
 
 export const dynamic = 'force-dynamic';
@@ -9,6 +10,7 @@ export const dynamic = 'force-dynamic';
 export async function GET(req: NextRequest) {
   try {
     await connectToDatabase();
+    await ensureDatabaseBootstrapped();
 
     const { searchParams } = new URL(req.url);
     const branchId = searchParams.get('branchId');
