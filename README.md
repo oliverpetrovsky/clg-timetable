@@ -1,5 +1,7 @@
 # 🎓 College Timetable & Assignment Tracker
 
+https://college-timetable-z4v0.onrender.com/
+
 > A modern, minimalist, and fast-loading web app for students and branch administrators to track class schedules, assignment deadlines, and sync tasks directly with Notion. Built with **Next.js 14**, **TypeScript**, **Tailwind CSS**, and **MongoDB**.
 
 ---
