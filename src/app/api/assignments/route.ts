@@ -20,6 +20,7 @@ export async function GET(req: NextRequest) {
     }
 
     await connectToDatabase();
+    const section = searchParams.get('section');
 
     const query: Record<string, any> = {
       year: parseInt(year),
@@ -27,6 +28,17 @@ export async function GET(req: NextRequest) {
 
     if (status !== 'all') {
       query.status = status;
+    }
+
+    if (section && section.toUpperCase() !== 'ALL') {
+      const secUpper = section.toUpperCase().trim();
+      query.$or = [
+        { section: null },
+        { section: '' },
+        { section: 'ALL' },
+        { section: 'All' },
+        { section: secUpper },
+      ];
     }
 
     if (mongoose.Types.ObjectId.isValid(branchId)) {

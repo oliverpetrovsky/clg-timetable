@@ -1,0 +1,4 @@
+- sort personal tasks as per priority order
+- edit tasks option
+- when more than 5 tasks done remove task with animation
+- dashboard should show assignments

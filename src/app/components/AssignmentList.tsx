@@ -49,8 +49,9 @@ const PRIORITY_CONFIG: Record<string, { badge: string; dot: string; label: strin
 };
 
 interface AssignmentListProps {
-  initialBranchId?: number;
+  initialBranchId?: string | number;
   initialYear?: number;
+  initialSection?: string;
   showFilters?: boolean;
   showTrackButton?: boolean;
   onTrackChange?: () => void;
@@ -59,6 +60,7 @@ interface AssignmentListProps {
 export default function AssignmentList({
   initialBranchId,
   initialYear,
+  initialSection,
   showFilters = true,
   showTrackButton = false,
   onTrackChange,
@@ -66,15 +68,29 @@ export default function AssignmentList({
   const [branches, setBranches] = useState<Branch[]>([]);
   const [batches, setBatches] = useState<any[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
-  const [branchId, setBranchId] = useState(initialBranchId || 0);
-  const [year, setYear] = useState(initialYear || 1);
+  const [branchId, setBranchId] = useState<string | number>(initialBranchId || '');
+  const [year, setYear] = useState<number>(initialYear || 1);
+  const [section, setSection] = useState<string>(initialSection || '');
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPriority, setSelectedPriority] = useState('all');
   const [trackedMap, setTrackedMap] = useState<Record<number, string>>({});
   const [showNotionModal, setShowNotionModal] = useState(false);
 
-  // Fetch branches and batches, load preference from cookies
+  // Sync with incoming props when user or parent updates
+  useEffect(() => {
+    if (initialBranchId) {
+      setBranchId(initialBranchId);
+    }
+    if (initialYear) {
+      setYear(initialYear);
+    }
+    if (initialSection !== undefined) {
+      setSection(initialSection);
+    }
+  }, [initialBranchId, initialYear, initialSection]);
+
+  // Fetch branches and batches, load preference from cookies if no initial props
   useEffect(() => {
     Promise.all([
       fetch('/api/branches').then(res => res.json()),
@@ -93,11 +109,26 @@ export default function AssignmentList({
             if (saved.branchId && list.some((b: any) => String(b.id) === String(saved.branchId) || String(b._id) === String(saved.branchId))) {
               setBranchId(saved.branchId);
               if (saved.year) setYear(Number(saved.year));
+              if (saved.section) setSection(saved.section);
               return;
             }
           }
         } catch {}
-        setBranchId(list[0].id || list[0]._id);
+
+        fetch('/api/auth/me')
+          .then(r => r.json())
+          .then(data => {
+            if (data.user?.branchId) {
+              setBranchId(data.user.branchId);
+              if (data.user.year) setYear(Number(data.user.year));
+              if (data.user.section) setSection(data.user.section);
+            } else {
+              setBranchId(list[0].id || list[0]._id);
+            }
+          })
+          .catch(() => {
+            setBranchId(list[0].id || list[0]._id);
+          });
       }
     });
   }, [initialBranchId]);
@@ -183,11 +214,12 @@ export default function AssignmentList({
       .catch(() => {});
   };
 
-  // Fetch assignments
+  // Fetch assignments for the selected/provided branch, year, and section
   useEffect(() => {
     if (!branchId) return;
     setLoading(true);
-    fetch(`/api/assignments?branchId=${branchId}&year=${year}`)
+    const secParam = section ? `&section=${encodeURIComponent(section)}` : '';
+    fetch(`/api/assignments?branchId=${branchId}&year=${year}${secParam}`)
       .then(res => res.json())
       .then(data => {
         setAssignments(data.assignments || []);
@@ -195,7 +227,7 @@ export default function AssignmentList({
         fetchTracking();
       })
       .catch(() => setLoading(false));
-  }, [branchId, year]);
+  }, [branchId, year, section]);
 
   // Track status update
   const trackAssignment = async (assignmentId: number, newStatus: string) => {
@@ -276,7 +308,7 @@ export default function AssignmentList({
         
         {/* Filters */}
         <div className="flex flex-wrap items-center gap-3">
-          {showFilters && (
+          {showFilters ? (
             <>
               {/* Branch Select */}
               <select
@@ -303,6 +335,17 @@ export default function AssignmentList({
                 ))}
               </select>
             </>
+          ) : (
+            <div className="flex items-center gap-2">
+              <span className="badge badge-lecture text-xs font-bold py-1 px-2.5">
+                {branches.find(b => String(b.id || (b as any)._id) === String(branchId))?.code || 'Branch'} • Year {year}
+              </span>
+              {section && (
+                <span className="badge badge-lab text-xs font-semibold py-1 px-2">
+                  Sec {section}
+                </span>
+              )}
+            </div>
           )}
 
           {/* Priority Filter */}

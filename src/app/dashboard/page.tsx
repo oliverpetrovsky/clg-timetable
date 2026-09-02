@@ -25,11 +25,13 @@ import {
 } from 'lucide-react';
 
 interface User {
-  id: number;
+  id: string;
   name: string;
   email: string;
   role: string;
-  branchId: number | null;
+  branchId: string | null;
+  branch_code?: string;
+  branch_name?: string;
   year: number | null;
   section: string | null;
 }
@@ -78,7 +80,8 @@ export default function DashboardPage() {
           router.push('/login');
           return;
         }
-        setUser(data.user);
+        const u = data.user;
+        setUser(u);
         setLoading(false);
 
         // Fetch notifications
@@ -86,9 +89,10 @@ export default function DashboardPage() {
           .then(res => res.json())
           .then(nData => setNotifications(nData.notifications || []));
 
-        // Fetch user assignments & tracking count
-        if (data.user.branchId && data.user.year) {
-          fetch(`/api/assignments?branchId=${data.user.branchId}&year=${data.user.year}`)
+        // Fetch user assignments & tracking count according to user's branch, year, and section
+        if (u.branchId && u.year) {
+          const secParam = u.section ? `&section=${encodeURIComponent(u.section)}` : '';
+          fetch(`/api/assignments?branchId=${u.branchId}&year=${u.year}${secParam}`)
             .then(res => res.json())
             .then(aData => {
               setAssignmentCount(aData.assignments?.length || 0);
@@ -260,9 +264,11 @@ export default function DashboardPage() {
           {/* Active Assignments */}
           <div className="card p-5 flex items-center justify-between">
             <div className="space-y-1">
-              <span className="text-xs font-medium text-slate-500">College Assignments</span>
+              <span className="text-xs font-medium text-slate-500">Course Assignments</span>
               <p className="text-2xl font-bold text-slate-900">{assignmentCount}</p>
-              <p className="text-[11px] text-blue-600 font-medium">Branch Year {user.year || 1}</p>
+              <p className="text-[11px] text-blue-600 font-medium">
+                {user.branch_code || 'Branch'} • Year {user.year || 1} Sec {user.section || 'A'}
+              </p>
             </div>
             <div className="w-11 h-11 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
               <BookOpen className="w-5 h-5" />
@@ -494,8 +500,15 @@ export default function DashboardPage() {
             <div className="space-y-3 pt-4 border-t border-slate-200/80">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-base font-bold text-slate-900">Branch Assignments</h2>
-                  <p className="text-xs text-slate-500">Official course assignments for Year {user.year || 1}</p>
+                  <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                    <span>{user.branch_code ? `${user.branch_code} ` : ''}Course Assignments</span>
+                    <span className="badge badge-lecture text-[10px]">
+                      Year {user.year || 1} • Sec {user.section || 'A'}
+                    </span>
+                  </h2>
+                  <p className="text-xs text-slate-500">
+                    Official coursework & homework for {user.branch_name || user.branch_code || 'your branch'}
+                  </p>
                 </div>
                 <button
                   onClick={() => setShowNotionModal(true)}
@@ -509,8 +522,17 @@ export default function DashboardPage() {
                 <AssignmentList
                   initialBranchId={user.branchId}
                   initialYear={user.year}
+                  initialSection={user.section || 'A'}
                   showFilters={false}
                   showTrackButton={true}
+                  onTrackChange={() => {
+                    fetch('/api/assignments/track')
+                      .then(res => res.json())
+                      .then(tData => {
+                        const completed = (tData.tracking || []).filter((t: any) => t.status === 'completed').length;
+                        setCompletedAssignmentCount(completed);
+                      });
+                  }}
                 />
               ) : (
                 <p className="text-xs text-slate-500">Branch not configured.</p>
@@ -550,19 +572,45 @@ export default function DashboardPage() {
         {/* Tab 3: Assignments */}
         {activeTab === 'assignments' && (
           <div className="animate-fade-in space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-200/80">
               <div>
-                <h2 className="text-base font-bold text-slate-900">All Branch Assignments</h2>
-                <p className="text-xs text-slate-500">Track deadlines, submissions, and priority levels</p>
+                <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                  <BookOpen className="w-5 h-5 text-blue-600" />
+                  <span>{user.branch_name || user.branch_code || 'Branch'} Assignments</span>
+                  <span className="badge badge-high text-[10px]">
+                    Year {user.year || 1} • Sec {user.section || 'A'}
+                  </span>
+                </h2>
+                <p className="text-xs text-slate-500">
+                  Track deadlines, homework submissions, and priority levels for your batch
+                </p>
               </div>
+              <button
+                onClick={() => setShowNotionModal(true)}
+                className="btn-notion text-xs py-2 px-3 self-start sm:self-auto flex items-center gap-1.5"
+              >
+                <span className="w-3.5 h-3.5 rounded bg-white/20 text-white flex items-center justify-center font-bold text-[9px]">
+                  N
+                </span>
+                <span>Sync Notion</span>
+              </button>
             </div>
 
             {user.branchId && user.year ? (
               <AssignmentList
                 initialBranchId={user.branchId}
                 initialYear={user.year}
+                initialSection={user.section || 'A'}
                 showFilters={false}
                 showTrackButton={true}
+                onTrackChange={() => {
+                  fetch('/api/assignments/track')
+                    .then(res => res.json())
+                    .then(tData => {
+                      const completed = (tData.tracking || []).filter((t: any) => t.status === 'completed').length;
+                      setCompletedAssignmentCount(completed);
+                    });
+                }}
               />
             ) : null}
           </div>
