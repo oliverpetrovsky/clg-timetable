@@ -48,12 +48,6 @@ export default function LoginPage() {
     }
   };
 
-  const fillQuickAccount = (e: string, p: string) => {
-    setEmail(e);
-    setPassword(p);
-    setError('');
-  };
-
   return (
     <div className="flex-1 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 animate-fade-in">
         <div className="card max-w-md w-full p-6 sm:p-8 space-y-6 shadow-xl border-slate-200/90">
@@ -67,51 +61,6 @@ export default function LoginPage() {
             </div>
             <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Welcome back</h1>
             <p className="text-xs text-slate-500">Sign in to your college account to view your personalized schedule</p>
-          </div>
-
-          {/* Quick Demo Credentials Bar */}
-          <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-3.5 space-y-2">
-            <div className="flex items-center justify-between text-[11px] text-slate-500 font-semibold uppercase tracking-wider">
-              <span className="flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                Demo Credentials (IIIT-B)
-              </span>
-              <span className="text-[10px] text-slate-400 font-normal">Click to fill</span>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
-              <button
-                type="button"
-                onClick={() => fillQuickAccount('classreps@iiitb.ac.in', 'tbsm-naamsujal-vichaar-Vy0m')}
-                className="py-1.5 px-2 text-[11px] font-medium bg-white hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 border border-slate-200 rounded-xl transition-all text-slate-700 flex flex-col items-center shadow-xs"
-              >
-                <span className="font-bold text-rose-600">CR Admin</span>
-                <span className="text-[9px] text-slate-400">Full Access</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => fillQuickAccount('cse.admin@iiitb.ac.in', 'branch123')}
-                className="py-1.5 px-2 text-[11px] font-medium bg-white hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 border border-slate-200 rounded-xl transition-all text-slate-700 flex flex-col items-center shadow-xs"
-              >
-                <span className="font-bold text-blue-600">CSE Admin</span>
-                <span className="text-[9px] text-slate-400">Dept Manage</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => fillQuickAccount('student.cse@iiitb.ac.in', 'student123')}
-                className="py-1.5 px-2 text-[11px] font-medium bg-white hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 border border-slate-200 rounded-xl transition-all text-slate-700 flex flex-col items-center shadow-xs"
-              >
-                <span className="font-bold text-emerald-600">CSE (Sec A)</span>
-                <span className="text-[9px] text-slate-400">Year 1</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => fillQuickAccount('student.ece@iiitb.ac.in', 'student123')}
-                className="py-1.5 px-2 text-[11px] font-medium bg-white hover:bg-purple-50 hover:text-purple-700 hover:border-purple-200 border border-slate-200 rounded-xl transition-all text-slate-700 flex flex-col items-center shadow-xs"
-              >
-                <span className="font-bold text-purple-600">ECE (Sec B)</span>
-                <span className="text-[9px] text-slate-400">Year 1</span>
-              </button>
-            </div>
           </div>
 
           {/* Error Banner */}

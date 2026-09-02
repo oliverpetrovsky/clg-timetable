@@ -12,6 +12,7 @@
 
 # production
 /build
+release.zip
 
 # misc
 .DS_Store
@@ -22,8 +23,15 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# local env files
+# environment variables & secrets (NEVER COMMIT)
+.env
 .env*.local
+.env.local
+.env.production
+.env.development
+.env.secrets
+secrets.env
+*.secrets
 
 # vercel
 .vercel

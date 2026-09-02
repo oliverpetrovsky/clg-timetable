@@ -3,16 +3,19 @@ services:
     name: college-timetable
     runtime: node
     plan: free
-    buildCommand: npm install --include=dev && npm run build
+    region: singapore
+    buildCommand: npm install && npm run build
     startCommand: npm start
     envVars:
       - key: NODE_ENV
         value: production
+      - key: ALLOWED_EMAIL_DOMAIN
+        value: iiitb.ac.in
       - key: MONGODB_URI
-        sync: false # Set this in Render Dashboard from your MongoDB Atlas cluster URI
+        sync: false
       - key: JWT_SECRET
         generateValue: true
-      - key: ALLOWED_EMAIL_DOMAIN
-        value: "*" # Set to your college domain (e.g. yourcollege.edu) to restrict signups
-      - key: NEXT_PUBLIC_APP_NAME
-        value: College Timetable Tracker
+      - key: SUPER_ADMIN_EMAIL
+        value: classreps@iiitb.ac.in
+      - key: SUPER_ADMIN_PASSWORD
+        sync: false
