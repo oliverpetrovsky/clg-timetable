@@ -34,6 +34,7 @@ import {
   addMonths, 
   subMonths 
 } from 'date-fns';
+import { getUserPreference, saveUserPreference } from '@/lib/userPreferences';
 
 interface TimetableEntry {
   id: string;
@@ -156,35 +157,40 @@ export default function TimetableView({
         setBatches((batchData.batches || []).filter((b: any) => ['CSE', 'ECE', 'AI&DS'].includes(b.branchCode)));
 
         if (!initialBranchId && list.length > 0) {
-          try {
-            const match = document.cookie.match(/clg_timetable_pref=([^;]+)/);
-            const savedStr = match ? decodeURIComponent(match[1]) : localStorage.getItem('clg_timetable_pref');
-            if (savedStr) {
-              const saved = JSON.parse(savedStr);
-              if (saved.branchId && list.some((b: any) => String(b.id) === String(saved.branchId) || String(b._id) === String(saved.branchId))) {
-                setBranchId(String(saved.branchId));
-                if (saved.year) setYear(Number(saved.year));
-                if (saved.section) setSection(String(saved.section));
-                setHasSavedPref(true);
-                return;
-              }
-            }
-          } catch {}
+          const saved = getUserPreference();
+          if (saved && saved.branchId && list.some((b: any) => String(b.id) === String(saved.branchId) || String(b._id) === String(saved.branchId))) {
+            setBranchId(String(saved.branchId));
+            if (saved.year) setYear(Number(saved.year));
+            if (saved.section) setSection(String(saved.section));
+            setHasSavedPref(true);
+            return;
+          }
           setBranchId(String(list[0].id || list[0]._id));
         }
       })
       .catch(() => {});
+
+    // Listen to sync events from other tabs / dropdowns
+    const handlePrefChange = (e: any) => {
+      if (initialBranchId) return;
+      const detail = e.detail;
+      if (detail && detail.branchId) {
+        setBranchId(String(detail.branchId));
+        if (detail.year) setYear(Number(detail.year));
+        if (detail.section) setSection(String(detail.section));
+        setHasSavedPref(true);
+      }
+    };
+    window.addEventListener('clg_pref_changed', handlePrefChange);
+    return () => window.removeEventListener('clg_pref_changed', handlePrefChange);
   }, [initialBranchId]);
 
-  // Persist preference to cookies
+  // Persist preference to cookies & localStorage
   const savePreferenceCookie = (bId: string, y: number, s: string) => {
     if (!bId) return;
-    try {
-      const pref = JSON.stringify({ branchId: bId, year: y, section: s });
-      document.cookie = `clg_timetable_pref=${encodeURIComponent(pref)}; path=/; max-age=31536000; SameSite=Lax`;
-      localStorage.setItem('clg_timetable_pref', pref);
-      setHasSavedPref(true);
-    } catch {}
+    const branch = branches.find(b => String(b.id || (b as any)._id) === String(bId));
+    saveUserPreference({ branchId: bId, branchCode: branch?.code, year: y, section: s });
+    setHasSavedPref(true);
   };
 
   const getBranchCode = (bId: string) => {

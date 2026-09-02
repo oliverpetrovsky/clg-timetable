@@ -23,8 +23,10 @@ import {
   Tag,
   Users,
   Target,
-  Check
+  Check,
+  BookmarkCheck
 } from 'lucide-react';
+import { getUserPreference, saveUserPreference } from '@/lib/userPreferences';
 
 export interface QuizItem {
   id: string;
@@ -46,6 +48,12 @@ export interface QuizItem {
   targetLabel?: string;
   branch_name?: string;
   branch_code?: string;
+}
+
+interface Branch {
+  id: string;
+  name: string;
+  code: string;
 }
 
 interface QuizListProps {
@@ -126,15 +134,18 @@ export default function QuizList({
   showFilters = true,
   onQuizCountChange,
 }: QuizListProps) {
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [batches, setBatches] = useState<any[]>([]);
   const [quizzes, setQuizzes] = useState<QuizItem[]>([]);
-  const [branchId, setBranchId] = useState<string | number>(initialBranchId || '');
+  const [branchId, setBranchId] = useState<string>(initialBranchId ? String(initialBranchId) : '');
   const [year, setYear] = useState<number>(initialYear || 1);
-  const [section, setSection] = useState<string>(initialSection || '');
+  const [section, setSection] = useState<string>(initialSection || 'ALL');
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('all');
   const [selectedTargetFilter, setSelectedTargetFilter] = useState('all');
   const [sortBy, setSortBy] = useState<'date' | 'subject' | 'weightage'>('date');
+  const [hasSavedPref, setHasSavedPref] = useState(false);
 
   // Preparation status tracking (persisted in localStorage)
   const [prepMap, setPrepMap] = useState<Record<string, 'not_started' | 'preparing' | 'ready'>>({});
@@ -166,10 +177,50 @@ export default function QuizList({
 
   // Sync props
   useEffect(() => {
-    if (initialBranchId) setBranchId(initialBranchId);
+    if (initialBranchId) setBranchId(String(initialBranchId));
     if (initialYear) setYear(initialYear);
     if (initialSection !== undefined) setSection(initialSection);
   }, [initialBranchId, initialYear, initialSection]);
+
+  // Load branches & cookies on mount
+  useEffect(() => {
+    Promise.all([
+      fetch('/api/branches').then(r => r.json()),
+      fetch('/api/batches').then(r => r.json()),
+    ])
+      .then(([branchData, batchData]) => {
+        const list = (branchData.branches || []).filter((b: any) => ['CSE', 'ECE', 'AI&DS'].includes(b.code));
+        setBranches(list);
+        setBatches((batchData.batches || []).filter((b: any) => ['CSE', 'ECE', 'AI&DS'].includes(b.branchCode)));
+
+        if (!initialBranchId && list.length > 0) {
+          const saved = getUserPreference();
+          if (saved && saved.branchId && list.some((b: any) => String(b.id) === String(saved.branchId) || String(b._id) === String(saved.branchId))) {
+            setBranchId(String(saved.branchId));
+            if (saved.year) setYear(Number(saved.year));
+            if (saved.section) setSection(saved.section);
+            setHasSavedPref(true);
+            return;
+          }
+          setBranchId(String(list[0].id || list[0]._id));
+        }
+      })
+      .catch(() => {});
+
+    // Listen to sync events from other tabs / dropdowns
+    const handlePrefChange = (e: any) => {
+      if (initialBranchId) return;
+      const detail = e.detail;
+      if (detail && detail.branchId) {
+        setBranchId(String(detail.branchId));
+        if (detail.year) setYear(Number(detail.year));
+        if (detail.section) setSection(String(detail.section));
+        setHasSavedPref(true);
+      }
+    };
+    window.addEventListener('clg_pref_changed', handlePrefChange);
+    return () => window.removeEventListener('clg_pref_changed', handlePrefChange);
+  }, [initialBranchId]);
 
   // Load preparation status from localStorage
   useEffect(() => {
@@ -191,12 +242,77 @@ export default function QuizList({
     });
   };
 
+  const getBranchCode = (bId: any) => {
+    const b = branches.find(item => String(item.id || (item as any)._id) === String(bId));
+    return b ? b.code : '';
+  };
+
+  const getAllowedYears = (bId: any) => {
+    const branchBatches = batches.filter(
+      b => String(b.branchId) === String(bId) && b.isActive !== false
+    );
+    if (branchBatches.length > 0) {
+      const yearMap = new Map<number, string>();
+      branchBatches.forEach(b => {
+        if (!yearMap.has(b.year)) {
+          yearMap.set(b.year, `Year ${b.year} (${b.programme})`);
+        }
+      });
+      return Array.from(yearMap.entries())
+        .sort(([y1], [y2]) => y1 - y2)
+        .map(([value, label]) => ({ value, label }));
+    }
+
+    const code = getBranchCode(bId);
+    if (code === 'AI&DS') {
+      return [
+        { value: 1, label: 'Year 1' },
+        { value: 2, label: 'Year 2' },
+        { value: 3, label: 'Year 3' },
+      ];
+    }
+    return [
+      { value: 1, label: 'Year 1' },
+      { value: 2, label: 'Year 2' },
+      { value: 3, label: 'Year 3' },
+      { value: 4, label: 'Year 4 (iMTech)' },
+      { value: 5, label: 'Year 5 (iMTech)' },
+    ];
+  };
+
+  const handleBranchChange = (newBranchId: string) => {
+    setBranchId(newBranchId);
+    const allowed = getAllowedYears(newBranchId);
+    let newYear = year;
+    if (!allowed.some(y => y.value === newYear)) {
+      newYear = allowed[0]?.value || 1;
+      setYear(newYear);
+    }
+    const branch = branches.find(b => String(b.id || (b as any)._id) === String(newBranchId));
+    saveUserPreference({ branchId: newBranchId, branchCode: branch?.code, year: newYear, section });
+    setHasSavedPref(true);
+  };
+
+  const handleYearChange = (newYear: number) => {
+    setYear(newYear);
+    const branch = branches.find(b => String(b.id || (b as any)._id) === String(branchId));
+    saveUserPreference({ branchId, branchCode: branch?.code, year: newYear, section });
+    setHasSavedPref(true);
+  };
+
+  const handleSectionChange = (newSection: string) => {
+    setSection(newSection);
+    const branch = branches.find(b => String(b.id || (b as any)._id) === String(branchId));
+    saveUserPreference({ branchId, branchCode: branch?.code, year, section: newSection });
+    setHasSavedPref(true);
+  };
+
   // Fetch quizzes
   useEffect(() => {
     setLoading(true);
     const bParam = branchId ? `branchId=${branchId}` : '';
     const yParam = year ? `year=${year}` : '';
-    const sParam = section ? `section=${encodeURIComponent(section)}` : '';
+    const sParam = section && section !== 'ALL' ? `section=${encodeURIComponent(section)}` : '';
     const queryParts = [bParam, yParam, sParam].filter(Boolean).join('&');
 
     fetch(`/api/quizzes${queryParts ? `?${queryParts}` : ''}`)
@@ -501,6 +617,48 @@ export default function QuizList({
             <span>Schedule Quiz</span>
           </button>
         </div>
+
+        {/* Top Dropdowns: Separate Course/Branch and Year filters (when showFilters is true) */}
+        {showFilters && (
+          <div className="flex flex-wrap items-center gap-2.5 pb-2 border-b border-slate-100">
+            {/* Separate Course / Branch Dropdown */}
+            <div className="relative min-w-[170px]">
+              <select
+                value={branchId}
+                onChange={e => handleBranchChange(e.target.value)}
+                className="select-field text-xs pl-3.5 pr-9 py-2 w-full font-medium text-slate-700"
+              >
+                <option value="">All Courses / Branches</option>
+                {branches.map(b => (
+                  <option key={b.id || (b as any)._id} value={b.id || (b as any)._id}>
+                    {b.code} — {b.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Separate Year Dropdown */}
+            <div className="relative min-w-[140px]">
+              <select
+                value={year}
+                onChange={e => handleYearChange(parseInt(e.target.value))}
+                className="select-field text-xs pl-3.5 pr-9 py-2 w-full font-medium text-slate-700"
+              >
+                {getAllowedYears(branchId).map(y => (
+                  <option key={y.value} value={y.value}>{y.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Saved preference indicator */}
+            {hasSavedPref && (
+              <span className="hidden sm:inline-flex items-center gap-1 text-[11px] text-slate-400 bg-slate-100 px-2 py-1 rounded-lg">
+                <BookmarkCheck className="w-3 h-3 text-purple-600" />
+                Saved default
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Toolbar: Search, Subject Filter, Target Audience Filter & Sort */}
         <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">

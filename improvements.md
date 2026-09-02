@@ -8,3 +8,4 @@
 - batch targeting for quizzes (e.g. all 1st years, only AI&DS, CSE Sec A, custom branches) :: solved ::
 - weekly timetable matrix view :: solved ::
 - monthly schedule & academic calendar view :: solved ::
+- separate year and course (CSE, ECE, AI&DS) filters synced via cookies & localStorage :: solved ::

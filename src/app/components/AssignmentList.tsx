@@ -18,6 +18,7 @@ import {
   ArrowUpDown
 } from 'lucide-react';
 import NotionSyncModal from './NotionSyncModal';
+import { getUserPreference, saveUserPreference } from '@/lib/userPreferences';
 
 interface Assignment {
   id: number;
@@ -110,19 +111,13 @@ export default function AssignmentList({
       setBatches((batchData.batches || []).filter((b: any) => ['CSE', 'ECE', 'AI&DS'].includes(b.branchCode)));
 
       if (!initialBranchId && list.length > 0) {
-        try {
-          const match = document.cookie.match(/clg_timetable_pref=([^;]+)/);
-          const savedStr = match ? decodeURIComponent(match[1]) : localStorage.getItem('clg_timetable_pref');
-          if (savedStr) {
-            const saved = JSON.parse(savedStr);
-            if (saved.branchId && list.some((b: any) => String(b.id) === String(saved.branchId) || String(b._id) === String(saved.branchId))) {
-              setBranchId(saved.branchId);
-              if (saved.year) setYear(Number(saved.year));
-              if (saved.section) setSection(saved.section);
-              return;
-            }
-          }
-        } catch {}
+        const saved = getUserPreference();
+        if (saved && saved.branchId && list.some((b: any) => String(b.id) === String(saved.branchId) || String(b._id) === String(saved.branchId))) {
+          setBranchId(saved.branchId);
+          if (saved.year) setYear(Number(saved.year));
+          if (saved.section) setSection(saved.section);
+          return;
+        }
 
         fetch('/api/auth/me')
           .then(r => r.json())
@@ -140,6 +135,19 @@ export default function AssignmentList({
           });
       }
     });
+
+    // Listen to sync events from other tabs / dropdowns
+    const handlePrefChange = (e: any) => {
+      if (initialBranchId) return;
+      const detail = e.detail;
+      if (detail && detail.branchId) {
+        setBranchId(detail.branchId);
+        if (detail.year) setYear(Number(detail.year));
+        if (detail.section) setSection(detail.section);
+      }
+    };
+    window.addEventListener('clg_pref_changed', handlePrefChange);
+    return () => window.removeEventListener('clg_pref_changed', handlePrefChange);
   }, [initialBranchId]);
 
   const getBranchCode = (bId: any) => {
@@ -188,24 +196,14 @@ export default function AssignmentList({
       newYear = allowed[0]?.value || 1;
       setYear(newYear);
     }
-    try {
-      const match = document.cookie.match(/clg_timetable_pref=([^;]+)/);
-      const existing = match ? JSON.parse(decodeURIComponent(match[1])) : {};
-      const updated = JSON.stringify({ ...existing, branchId: newBranchId, year: newYear });
-      document.cookie = `clg_timetable_pref=${encodeURIComponent(updated)}; path=/; max-age=31536000; SameSite=Lax`;
-      localStorage.setItem('clg_timetable_pref', updated);
-    } catch {}
+    const branch = branches.find(b => String(b.id || (b as any)._id) === String(newBranchId));
+    saveUserPreference({ branchId: String(newBranchId), branchCode: branch?.code, year: newYear, section });
   };
 
   const handleYearChange = (newYear: number) => {
     setYear(newYear);
-    try {
-      const match = document.cookie.match(/clg_timetable_pref=([^;]+)/);
-      const existing = match ? JSON.parse(decodeURIComponent(match[1])) : {};
-      const updated = JSON.stringify({ ...existing, branchId, year: newYear });
-      document.cookie = `clg_timetable_pref=${encodeURIComponent(updated)}; path=/; max-age=31536000; SameSite=Lax`;
-      localStorage.setItem('clg_timetable_pref', updated);
-    } catch {}
+    const branch = branches.find(b => String(b.id || (b as any)._id) === String(branchId));
+    saveUserPreference({ branchId: String(branchId), branchCode: branch?.code, year: newYear, section });
   };
 
   // Fetch tracking data if track button is enabled
