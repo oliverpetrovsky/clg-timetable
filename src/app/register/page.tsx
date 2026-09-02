@@ -76,8 +76,7 @@ export default function RegisterPage() {
         return;
       }
 
-      router.push('/dashboard');
-      router.refresh();
+      window.location.href = '/dashboard';
     } catch {
       setError('Network error occurred. Please try again.');
       setLoading(false);
@@ -246,9 +245,9 @@ export default function RegisterPage() {
           <div className="text-center pt-2 border-t border-slate-100">
             <p className="text-xs text-slate-500">
               Already have an account?{' '}
-              <Link href="/login" className="text-blue-600 font-semibold hover:underline">
+              <a href="/login" className="text-blue-600 font-semibold hover:underline">
                 Sign in
-              </Link>
+              </a>
             </p>
           </div>
 

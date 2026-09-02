@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
 import { 
   Calendar, 
   BookOpen, 
@@ -11,10 +10,10 @@ import {
   Sparkles, 
   CheckCircle2, 
   Clock, 
-  RefreshCw,
-  Layers,
-  ChevronRight,
-  BookmarkCheck,
+  RefreshCw, 
+  Layers, 
+  ChevronRight, 
+  BookmarkCheck, 
   LayoutDashboard
 } from 'lucide-react';
 
@@ -85,41 +84,41 @@ export default function Home() {
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
                 {user ? (
                   <>
-                    <Link
+                    <a
                       href="/dashboard"
                       className="w-full sm:w-auto btn-primary text-sm py-3 px-6 shadow-md flex items-center justify-center gap-2"
                     >
                       <LayoutDashboard className="w-4 h-4" />
                       <span>Go to Dashboard</span>
                       <ArrowRight className="w-4 h-4" />
-                    </Link>
+                    </a>
 
-                    <Link
+                    <a
                       href="/timetable"
-                      className="w-full sm:w-auto btn-secondary text-sm py-3 px-6 shadow-xs flex items-center justify-center gap-2"
+                      className="w-full sm:w-auto btn-secondary text-sm py-3 px-6 shadow-sm flex items-center justify-center gap-2"
                     >
                       <Calendar className="w-4 h-4" />
                       <span>View Timetable</span>
-                    </Link>
+                    </a>
                   </>
                 ) : (
                   <>
-                    <Link
+                    <a
                       href="/timetable"
                       className="w-full sm:w-auto btn-primary text-sm py-3 px-6 shadow-md flex items-center justify-center gap-2"
                     >
                       <Calendar className="w-4 h-4" />
                       <span>View Timetable</span>
                       <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full font-normal">Free</span>
-                    </Link>
+                    </a>
 
-                    <Link
+                    <a
                       href="/register"
-                      className="w-full sm:w-auto btn-secondary text-sm py-3 px-6 shadow-xs flex items-center justify-center gap-2"
+                      className="w-full sm:w-auto btn-secondary text-sm py-3 px-6 shadow-sm flex items-center justify-center gap-2"
                     >
                       <span>Student Sign Up</span>
                       <ArrowRight className="w-4 h-4 text-slate-400" />
-                    </Link>
+                    </a>
                   </>
                 )}
               </div>
@@ -158,40 +157,40 @@ export default function Home() {
                       CSE Year 2 • Section A Schedule
                     </span>
                   </div>
-                  <Link
+                  <a
                     href="/timetable"
                     className="badge bg-emerald-50 text-emerald-700 border-emerald-200 text-[11px] hover:bg-emerald-100 transition-colors"
                   >
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1" />
                     Interactive Schedule →
-                  </Link>
+                  </a>
                 </div>
 
                 {/* Mockup Classes Preview */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <Link href="/timetable" className="card p-4 bg-white border-blue-200/80 ring-1 ring-blue-500/10 hover:shadow-md transition-all">
+                  <a href="/timetable" className="card p-4 bg-white border-blue-200/80 ring-1 ring-blue-500/10 hover:shadow-md transition-all">
                     <span className="badge badge-lecture text-[10px]">Lecture</span>
                     <h4 className="font-semibold text-sm text-slate-900 mt-2">Data Structures & Algorithms</h4>
                     <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
                       <Clock className="w-3 h-3" /> 09:00 - 10:00 AM • Room 301
                     </p>
-                  </Link>
+                  </a>
 
-                  <Link href="/timetable" className="card p-4 bg-white border-purple-200/80 hover:shadow-md transition-all">
+                  <a href="/timetable" className="card p-4 bg-white border-purple-200/80 hover:shadow-md transition-all">
                     <span className="badge badge-tutorial text-[10px]">Tutorial</span>
                     <h4 className="font-semibold text-sm text-slate-900 mt-2">Discrete Mathematics</h4>
                     <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
                       <Clock className="w-3 h-3" /> 10:00 - 11:00 AM • Room 302
                     </p>
-                  </Link>
+                  </a>
 
-                  <Link href="/timetable" className="card p-4 bg-white border-emerald-200/80 hover:shadow-md transition-all">
+                  <a href="/timetable" className="card p-4 bg-white border-emerald-200/80 hover:shadow-md transition-all">
                     <span className="badge badge-lab text-[10px]">Lab Session</span>
                     <h4 className="font-semibold text-sm text-slate-900 mt-2">DSA Practical Lab</h4>
                     <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
                       <Clock className="w-3 h-3" /> 01:00 - 03:00 PM • Lab 201
                     </p>
-                  </Link>
+                  </a>
                 </div>
 
               </div>
@@ -243,9 +242,9 @@ export default function Home() {
                 </ul>
 
                 <div className="pt-2">
-                  <Link href={user ? '/dashboard' : '/register'} className="btn-primary text-xs py-2.5 px-4 shadow-sm">
+                  <a href={user ? '/dashboard' : '/register'} className="btn-primary text-xs py-2.5 px-4 shadow-sm">
                     {user ? 'Open Notion Hub' : 'Try Notion Sync Now'}
-                  </Link>
+                  </a>
                 </div>
               </div>
 
@@ -369,12 +368,12 @@ export default function Home() {
               Check your classes, track assignments, and streamline your schedule in seconds.
             </p>
             <div className="flex flex-wrap items-center justify-center gap-3">
-              <Link href={user ? '/dashboard' : '/register'} className="btn-accent text-xs py-3 px-6 shadow-md">
+              <a href={user ? '/dashboard' : '/register'} className="btn-accent text-xs py-3 px-6 shadow-md">
                 {user ? 'Open Dashboard' : 'Create Student Account'}
-              </Link>
-              <Link href="/timetable" className="btn-secondary text-xs py-3 px-6 bg-slate-800 text-white border-slate-700 hover:bg-slate-700">
+              </a>
+              <a href="/timetable" className="btn-secondary text-xs py-3 px-6 bg-slate-800 text-white border-slate-700 hover:bg-slate-700">
                 Explore Timetable
-              </Link>
+              </a>
             </div>
           </div>
         </section>
