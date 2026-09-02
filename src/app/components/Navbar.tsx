@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { 
   Calendar, 
   BookOpen, 
@@ -33,11 +34,6 @@ export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
 
-  const navigateTo = (path: string) => {
-    setMenuOpen(false);
-    router.push(path);
-  };
-
   useEffect(() => {
     fetch('/api/auth/me')
       .then(res => res.json())
@@ -63,7 +59,8 @@ export default function Navbar() {
       await fetch('/api/auth/logout', { method: 'POST' });
     } catch {}
     setUser(null);
-    navigateTo('/');
+    setMenuOpen(false);
+    router.push('/');
     router.refresh();
   };
 
@@ -71,18 +68,18 @@ export default function Navbar() {
 
   return (
     <>
-      <header className="sticky top-0 z-50 w-full bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-xs">
+      <header className="sticky top-0 z-50 w-full bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             
             {/* Brand Logo */}
             <div className="flex items-center gap-8">
-              <a 
+              <Link 
                 href="/" 
-                onClick={(e) => { e.preventDefault(); navigateTo('/'); }}
+                onClick={() => setMenuOpen(false)}
                 className="flex items-center gap-2.5 group cursor-pointer"
               >
-                <div className="w-9 h-9 rounded-xl bg-slate-900 text-white flex items-center justify-center font-bold text-sm shadow-xs group-hover:scale-105 transition-transform">
+                <div className="w-9 h-9 rounded-xl bg-slate-900 text-white flex items-center justify-center font-bold text-sm shadow-sm group-hover:scale-105 transition-transform">
                   <span className="bg-gradient-to-tr from-blue-400 to-indigo-200 bg-clip-text text-transparent font-extrabold text-base">
                     T
                   </span>
@@ -95,64 +92,60 @@ export default function Navbar() {
                     IIIT-B Portal
                   </span>
                 </div>
-              </a>
+              </Link>
 
               {/* Desktop Nav Links */}
               <nav className="hidden md:flex items-center gap-1.5">
-                <a
+                <Link
                   href="/timetable"
-                  onClick={(e) => { e.preventDefault(); navigateTo('/timetable'); }}
                   className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
                     isActive('/timetable')
-                      ? 'bg-slate-900 text-white shadow-xs'
+                      ? 'bg-slate-900 text-white shadow-sm'
                       : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                   }`}
                 >
                   <Calendar className="w-3.5 h-3.5" />
                   Timetable
-                </a>
+                </Link>
 
-                <a
+                <Link
                   href="/assignments"
-                  onClick={(e) => { e.preventDefault(); navigateTo('/assignments'); }}
                   className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
                     isActive('/assignments')
-                      ? 'bg-slate-900 text-white shadow-xs'
+                      ? 'bg-slate-900 text-white shadow-sm'
                       : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                   }`}
                 >
                   <BookOpen className="w-3.5 h-3.5" />
                   Assignments
-                </a>
+                </Link>
 
                 {user && (
-                  <a
+                  <Link
                     href="/dashboard"
-                    onClick={(e) => { e.preventDefault(); navigateTo('/dashboard'); }}
                     className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
                       isActive('/dashboard')
-                        ? 'bg-blue-600 text-white shadow-xs'
+                        ? 'bg-blue-600 text-white shadow-sm'
                         : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                     }`}
                   >
                     <LayoutDashboard className="w-3.5 h-3.5" />
                     Dashboard
-                  </a>
+                  </Link>
                 )}
 
                 {user && (user.role === 'admin' || user.role === 'superadmin') && (
-                  <a
+                  <Link
                     href="/admin"
-                    onClick={(e) => { e.preventDefault(); navigateTo('/admin'); }}
                     className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
                       isActive('/admin')
-                        ? 'bg-purple-700 text-white shadow-xs'
+                        ? 'bg-purple-700 text-white shadow-sm'
                         : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                     }`}
                   >
                     <Shield className="w-3.5 h-3.5" />
                     Admin Panel
-                  </a>
+                  </Link>
                 )}
               </nav>
             </div>
@@ -167,9 +160,8 @@ export default function Navbar() {
               {user ? (
                 <div className="flex items-center gap-3 pl-2 border-l border-slate-200">
                   {/* Notifications Link */}
-                  <a
+                  <Link
                     href="/dashboard?tab=notifications"
-                    onClick={(e) => { e.preventDefault(); navigateTo('/dashboard?tab=notifications'); }}
                     className="relative p-2 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
                     title="Notifications"
                   >
@@ -179,7 +171,7 @@ export default function Navbar() {
                         {notifCount > 9 ? '9+' : notifCount}
                       </span>
                     )}
-                  </a>
+                  </Link>
 
                   {/* User Profile Pill */}
                   <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200/80">
@@ -208,20 +200,18 @@ export default function Navbar() {
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
-                  <a
+                  <Link
                     href="/login"
-                    onClick={(e) => { e.preventDefault(); navigateTo('/login'); }}
-                    className="btn-secondary text-xs py-2 px-3.5 cursor-pointer shadow-2xs font-semibold"
+                    className="btn-secondary text-xs py-2 px-3.5 cursor-pointer shadow-sm font-semibold"
                   >
                     Log in
-                  </a>
-                  <a
+                  </Link>
+                  <Link
                     href="/register"
-                    onClick={(e) => { e.preventDefault(); navigateTo('/register'); }}
-                    className="btn-primary text-xs py-2 px-4 shadow-2xs cursor-pointer font-semibold"
+                    className="btn-primary text-xs py-2 px-4 shadow-sm cursor-pointer font-semibold"
                   >
                     Get Started
-                  </a>
+                  </Link>
                 </div>
               )}
             </div>
@@ -255,49 +245,49 @@ export default function Navbar() {
         {menuOpen && (
           <div className="md:hidden border-t border-slate-200 bg-white px-4 pt-3 pb-6 space-y-3 shadow-xl animate-fade-in">
             <div className="space-y-1">
-              <a
+              <Link
                 href="/timetable"
-                onClick={(e) => { e.preventDefault(); navigateTo('/timetable'); }}
+                onClick={() => setMenuOpen(false)}
                 className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold cursor-pointer ${
                   isActive('/timetable') ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'
                 }`}
               >
                 <Calendar className="w-4 h-4" />
                 Timetable
-              </a>
-              <a
+              </Link>
+              <Link
                 href="/assignments"
-                onClick={(e) => { e.preventDefault(); navigateTo('/assignments'); }}
+                onClick={() => setMenuOpen(false)}
                 className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold cursor-pointer ${
                   isActive('/assignments') ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'
                 }`}
               >
                 <BookOpen className="w-4 h-4" />
                 Assignments
-              </a>
+              </Link>
               {user && (
-                <a
+                <Link
                   href="/dashboard"
-                  onClick={(e) => { e.preventDefault(); navigateTo('/dashboard'); }}
+                  onClick={() => setMenuOpen(false)}
                   className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold cursor-pointer ${
                     isActive('/dashboard') ? 'bg-blue-600 text-white' : 'text-slate-600 hover:bg-slate-50'
                   }`}
                 >
                   <LayoutDashboard className="w-4 h-4" />
                   Personal Dashboard
-                </a>
+                </Link>
               )}
               {user && (user.role === 'admin' || user.role === 'superadmin') && (
-                <a
+                <Link
                   href="/admin"
-                  onClick={(e) => { e.preventDefault(); navigateTo('/admin'); }}
+                  onClick={() => setMenuOpen(false)}
                   className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold cursor-pointer ${
                     isActive('/admin') ? 'bg-purple-700 text-white' : 'text-slate-600 hover:bg-slate-50'
                   }`}
                 >
                   <Shield className="w-4 h-4" />
                   Admin Panel
-                </a>
+                </Link>
               )}
             </div>
 
@@ -322,20 +312,20 @@ export default function Navbar() {
               </div>
             ) : (
               <div className="pt-3 border-t border-slate-100 grid grid-cols-2 gap-2">
-                <a
+                <Link
                   href="/login"
-                  onClick={(e) => { e.preventDefault(); navigateTo('/login'); }}
+                  onClick={() => setMenuOpen(false)}
                   className="btn-secondary text-xs text-center py-2.5 cursor-pointer font-semibold"
                 >
                   Log in
-                </a>
-                <a
+                </Link>
+                <Link
                   href="/register"
-                  onClick={(e) => { e.preventDefault(); navigateTo('/register'); }}
+                  onClick={() => setMenuOpen(false)}
                   className="btn-primary text-xs text-center py-2.5 cursor-pointer font-semibold"
                 >
                   Sign up
-                </a>
+                </Link>
               </div>
             )}
           </div>
