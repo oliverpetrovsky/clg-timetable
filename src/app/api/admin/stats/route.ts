@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
-import { User, Assignment, TimetableEntry } from '@/lib/models';
+import { User, Assignment, TimetableEntry, Quiz } from '@/lib/models';
 import { getCurrentUser } from '@/lib/auth';
 import mongoose from 'mongoose';
 
@@ -38,11 +38,27 @@ export async function GET() {
       timetableQuery.branchId = branchObjectId;
     }
 
-    const [totalStudents, totalAssignments, activeAssignments, totalEntries] = await Promise.all([
+    const quizQuery: Record<string, any> = {};
+    if (isBranchAdmin && branchObjectId) {
+      quizQuery.$or = [
+        { branchId: branchObjectId },
+        { targetBranches: branchObjectId },
+        { targetBranchCodes: 'ALL' },
+        { targetType: 'all_first_years' },
+        { targetType: 'all' },
+        { targetType: 'all_branch_year' },
+      ];
+    }
+
+    const upcomingQuizQuery: Record<string, any> = { ...quizQuery, status: 'upcoming' };
+
+    const [totalStudents, totalAssignments, activeAssignments, totalEntries, totalQuizzes, upcomingQuizzes] = await Promise.all([
       User.countDocuments(userQuery),
       Assignment.countDocuments(assignmentQuery),
       Assignment.countDocuments(activeAssignmentQuery),
       TimetableEntry.countDocuments(timetableQuery),
+      Quiz.countDocuments(quizQuery),
+      Quiz.countDocuments(upcomingQuizQuery),
     ]);
 
     return NextResponse.json({
@@ -51,6 +67,8 @@ export async function GET() {
         totalAssignments,
         activeAssignments,
         totalEntries,
+        totalQuizzes,
+        upcomingQuizzes,
       },
     });
   } catch (error: any) {
@@ -58,3 +76,4 @@ export async function GET() {
     return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
   }
 }
+

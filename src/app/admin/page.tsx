@@ -23,8 +23,12 @@ import {
   User as UserIcon,
   Layers,
   Sparkles,
-  RefreshCw
+  RefreshCw,
+  GraduationCap,
+  Target
 } from 'lucide-react';
+import QuizList from '../components/QuizList';
+
 
 interface User {
   id: string;
@@ -91,6 +95,8 @@ interface Stats {
   totalAssignments: number;
   activeAssignments: number;
   totalEntries: number;
+  totalQuizzes?: number;
+  upcomingQuizzes?: number;
 }
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -100,7 +106,8 @@ export default function AdminPage() {
   const [branches, setBranches] = useState<Branch[]>([]);
   const [batches, setBatches] = useState<BatchItem[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'timetable' | 'assignments' | 'users'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'timetable' | 'assignments' | 'quizzes' | 'users'>('overview');
+
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState({ text: '', type: '' });
   const [saving, setSaving] = useState(false);
@@ -236,6 +243,16 @@ export default function AdminPage() {
 
   // Dynamically query database batches for allowed years
   const getAllowedYears = (bId: string) => {
+    if (bId === 'all') {
+      return [
+        { value: 1, label: 'Year 1 (All 1st Years - CSE, ECE, AI&DS)' },
+        { value: 2, label: 'Year 2 (All Branches)' },
+        { value: 3, label: 'Year 3 (All Branches)' },
+        { value: 4, label: 'Year 4 (CSE & ECE iMTech)' },
+        { value: 5, label: 'Year 5 (CSE & ECE iMTech)' },
+      ];
+    }
+
     const branchBatches = batches.filter(
       b => String(b.branchId) === String(bId) && b.isActive !== false
     );
@@ -270,6 +287,14 @@ export default function AdminPage() {
 
   // Dynamically query database batches for allowed sections
   const getAllowedSections = (bId: string, targetYear?: number) => {
+    if (bId === 'all') {
+      return [
+        { value: 'ALL', label: 'All Sections (Section A & Section B)' },
+        { value: 'A', label: 'Section A Only' },
+        { value: 'B', label: 'Section B Only' },
+      ];
+    }
+
     const branchBatches = batches.filter(
       b =>
         String(b.branchId) === String(bId) &&
@@ -423,10 +448,11 @@ export default function AdminPage() {
     setSaving(true);
     setMessage({ text: '', type: '' });
 
-    const payload = {
-      branchId: asBranchId,
+    const isAllBranches = asBranchId === 'all';
+    const payload: any = {
+      branchId: isAllBranches ? 'all' : asBranchId,
       year: asYear,
-      section: asSection.trim() || null,
+      section: isAllBranches && (!asSection || asSection === 'ALL') ? 'ALL' : (asSection.trim() || null),
       subject: asSubject.trim(),
       title: asTitle.trim(),
       description: asDescription.trim() || null,
@@ -434,6 +460,12 @@ export default function AdminPage() {
       priority: asPriority,
       status: asStatus,
     };
+
+    if (isAllBranches) {
+      payload.targetType = asYear === 1 ? 'all_first_years' : 'all_branch_year';
+      payload.targetBranchCodes = ['ALL', 'CSE', 'ECE', 'AI&DS'];
+      payload.targetLabel = asYear === 1 ? 'All 1st Years (CSE, ECE, AI&DS)' : `All Year ${asYear} Students`;
+    }
 
     try {
       const isEdit = showModal === 'edit_as' && editingEntryId;
@@ -516,7 +548,7 @@ export default function AdminPage() {
           </div>
 
           {/* Quick Actions */}
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => {
                 setEditingEntryId(null);
@@ -525,7 +557,7 @@ export default function AdminPage() {
                 setTtRoom('');
                 setShowModal('create_tt');
               }}
-              className="btn-primary text-xs py-2.5 px-4 shadow-sm flex items-center gap-1.5"
+              className="btn-primary text-xs py-2.5 px-3.5 shadow-sm flex items-center gap-1.5"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Add Class</span>
@@ -540,10 +572,18 @@ export default function AdminPage() {
                 setAsDueDate('');
                 setShowModal('create_as');
               }}
-              className="btn-secondary text-xs py-2.5 px-4 shadow-2xs flex items-center gap-1.5"
+              className="btn-secondary text-xs py-2.5 px-3.5 shadow-2xs flex items-center gap-1.5"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Publish Assignment</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('quizzes')}
+              className="btn-primary text-xs py-2.5 px-3.5 bg-purple-700 hover:bg-purple-800 text-white shadow-sm flex items-center gap-1.5"
+            >
+              <GraduationCap className="w-3.5 h-3.5" />
+              <span>Schedule Batch Quiz</span>
             </button>
           </div>
         </div>
@@ -604,6 +644,19 @@ export default function AdminPage() {
             <span>Manage Assignments</span>
           </button>
 
+          <button
+            type="button"
+            onClick={() => setActiveTab('quizzes')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              activeTab === 'quizzes'
+                ? 'bg-white text-slate-900 shadow-sm border border-slate-200/90 ring-1 ring-black/5'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-white/70'
+            }`}
+          >
+            <GraduationCap className="w-4 h-4 text-purple-600 shrink-0" />
+            <span>Manage Quizzes & Batches</span>
+          </button>
+
           {isSuperAdmin && (
             <button
               type="button"
@@ -623,7 +676,7 @@ export default function AdminPage() {
         {/* ===================== TAB: OVERVIEW ===================== */}
         {activeTab === 'overview' && stats && (
           <div className="space-y-8 animate-fade-in">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
               <div className="card p-5 space-y-1">
                 <p className="text-xs text-slate-500 font-medium">Enrolled Students</p>
                 <p className="text-2xl sm:text-3xl font-extrabold text-slate-900">{stats.totalStudents}</p>
@@ -643,13 +696,18 @@ export default function AdminPage() {
                 <p className="text-xs text-blue-700 font-medium">Active Deadlines</p>
                 <p className="text-2xl sm:text-3xl font-extrabold text-blue-900">{stats.activeAssignments}</p>
               </div>
+
+              <div className="card p-5 space-y-1 border-purple-200/80 bg-purple-50/20 col-span-2 sm:col-span-1">
+                <p className="text-xs text-purple-700 font-medium">Upcoming Quizzes</p>
+                <p className="text-2xl sm:text-3xl font-extrabold text-purple-900">{stats.upcomingQuizzes ?? stats.totalQuizzes ?? 0}</p>
+              </div>
             </div>
 
             {/* Quick Links Card */}
             <div className="card p-6 bg-slate-900 text-white space-y-4">
               <h3 className="text-base font-semibold">Quick Administration Controls</h3>
               <p className="text-xs text-slate-300">
-                Choose a branch and batch below to edit lecture timings, swap classrooms, add tutorials, or modify due dates.
+                Choose a branch and batch below to edit lecture timings, swap classrooms, schedule quizzes across batches, or modify due dates.
               </p>
               <div className="flex flex-wrap gap-2 pt-2">
                 <button
@@ -664,8 +722,15 @@ export default function AdminPage() {
                 >
                   Edit Assignments →
                 </button>
+                <button
+                  onClick={() => setActiveTab('quizzes')}
+                  className="btn-secondary text-xs py-2 px-4 bg-purple-900/80 text-white border-purple-700 hover:bg-purple-800"
+                >
+                  Schedule Batch Quizzes →
+                </button>
               </div>
             </div>
+
 
             {/* Database Batches Grid */}
             <div className="card p-6 space-y-4">
@@ -985,8 +1050,21 @@ export default function AdminPage() {
           </div>
         )}
 
+        {/* ===================== TAB: MANAGE QUIZZES & BATCHES ===================== */}
+        {activeTab === 'quizzes' && (
+          <div className="space-y-6 animate-fade-in">
+            <QuizList
+              initialBranchId={mgmtBranchId}
+              initialYear={mgmtYear}
+              initialSection={mgmtSection}
+              showFilters={true}
+            />
+          </div>
+        )}
+
         {/* ===================== TAB: USERS & ROLES (SUPERADMIN) ===================== */}
         {activeTab === 'users' && isSuperAdmin && (
+
           <div className="space-y-6 animate-fade-in">
             <div className="card p-4 sm:p-5 flex items-center justify-between gap-4">
               <div className="relative w-full sm:w-72">
@@ -1255,6 +1333,10 @@ export default function AdminPage() {
                     onChange={e => {
                       const bId = e.target.value;
                       setAsBranchId(bId);
+                      if (bId === 'all') {
+                        setAsSection('ALL');
+                        return;
+                      }
                       const code = getBranchCode(bId);
                       if (code === 'AI&DS' && asYear > 3) setAsYear(1);
                       setAsSection(code === 'CSE' ? 'A' : 'B');
@@ -1262,6 +1344,7 @@ export default function AdminPage() {
                     className="select-field text-xs"
                     required
                   >
+                    <option value="all">🌟 All Branches (All 1st Years / All Batches)</option>
                     {branches.map(b => (
                       <option key={b.id || b._id} value={b.id || b._id}>{b.code} — {b.name}</option>
                     ))}

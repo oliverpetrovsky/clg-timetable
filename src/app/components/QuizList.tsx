@@ -24,7 +24,9 @@ import {
   Users,
   Target,
   Check,
-  BookmarkCheck
+  BookmarkCheck,
+  ShieldCheck,
+  ShieldAlert
 } from 'lucide-react';
 import { getUserPreference, saveUserPreference } from '@/lib/userPreferences';
 
@@ -68,12 +70,42 @@ const TARGET_PRESETS = [
   {
     id: 'all_first_years',
     label: 'All 1st Years (CSE, ECE, AI&DS)',
-    shortLabel: 'All 1st Years',
+    shortLabel: '🌟 All 1st Years',
     type: 'all_first_years',
     branches: ['ALL', 'CSE', 'ECE', 'AI&DS'],
     year: 1,
     section: 'ALL',
     badgeColor: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+  },
+  {
+    id: 'all_year2',
+    label: 'All Year 2 Batches (CSE & ECE)',
+    shortLabel: '⚡ All Year 2',
+    type: 'all_branch_year',
+    branches: ['CSE', 'ECE'],
+    year: 2,
+    section: 'ALL',
+    badgeColor: 'bg-amber-50 text-amber-800 border-amber-200',
+  },
+  {
+    id: 'all_year3',
+    label: 'All Year 3 Batches (CSE, ECE, AI&DS)',
+    shortLabel: '🚀 All Year 3',
+    type: 'all_branch_year',
+    branches: ['CSE', 'ECE', 'AI&DS'],
+    year: 3,
+    section: 'ALL',
+    badgeColor: 'bg-teal-50 text-teal-800 border-teal-200',
+  },
+  {
+    id: 'all_batches',
+    label: 'All Batches & Branches (College-wide)',
+    shortLabel: '🏛️ All Batches',
+    type: 'all',
+    branches: ['ALL', 'CSE', 'ECE', 'AI&DS'],
+    year: 1,
+    section: 'ALL',
+    badgeColor: 'bg-rose-50 text-rose-800 border-rose-200',
   },
   {
     id: 'aids_only',
@@ -106,19 +138,9 @@ const TARGET_PRESETS = [
     badgeColor: 'bg-emerald-50 text-emerald-700 border-emerald-200',
   },
   {
-    id: 'cse_ece_year2',
-    label: 'CSE & ECE Year 2',
-    shortLabel: 'CSE & ECE Y2',
-    type: 'all_branch_year',
-    branches: ['CSE', 'ECE'],
-    year: 2,
-    section: 'ALL',
-    badgeColor: 'bg-amber-50 text-amber-800 border-amber-200',
-  },
-  {
     id: 'custom',
     label: 'Custom Batch Target',
-    shortLabel: 'Custom Target',
+    shortLabel: '🎯 Custom Target',
     type: 'custom',
     branches: [],
     year: 1,
@@ -126,6 +148,7 @@ const TARGET_PRESETS = [
     badgeColor: 'bg-slate-100 text-slate-700 border-slate-200',
   },
 ];
+
 
 export default function QuizList({
   initialBranchId,
@@ -146,6 +169,8 @@ export default function QuizList({
   const [selectedTargetFilter, setSelectedTargetFilter] = useState('all');
   const [sortBy, setSortBy] = useState<'date' | 'subject' | 'weightage'>('date');
   const [hasSavedPref, setHasSavedPref] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const canManageQuizzes = currentUser?.role === 'admin' || currentUser?.role === 'superadmin';
 
   // Preparation status tracking (persisted in localStorage)
   const [prepMap, setPrepMap] = useState<Record<string, 'not_started' | 'preparing' | 'ready'>>({});
@@ -187,8 +212,12 @@ export default function QuizList({
     Promise.all([
       fetch('/api/branches').then(r => r.json()),
       fetch('/api/batches').then(r => r.json()),
+      fetch('/api/auth/me').then(r => r.json()).catch(() => ({ user: null })),
     ])
-      .then(([branchData, batchData]) => {
+      .then(([branchData, batchData, authData]) => {
+        if (authData?.user) {
+          setCurrentUser(authData.user);
+        }
         const list = (branchData.branches || []).filter((b: any) => ['CSE', 'ECE', 'AI&DS'].includes(b.code));
         setBranches(list);
         setBatches((batchData.batches || []).filter((b: any) => ['CSE', 'ECE', 'AI&DS'].includes(b.branchCode)));
@@ -200,6 +229,12 @@ export default function QuizList({
             if (saved.year) setYear(Number(saved.year));
             if (saved.section) setSection(saved.section);
             setHasSavedPref(true);
+            return;
+          }
+          if (authData?.user?.branchId) {
+            setBranchId(String(authData.user.branchId));
+            if (authData.user.year) setYear(Number(authData.user.year));
+            if (authData.user.section) setSection(String(authData.user.section));
             return;
           }
           setBranchId(String(list[0].id || list[0]._id));
@@ -405,6 +440,7 @@ export default function QuizList({
   // Add Quiz Handler with Batch Targeting
   const handleAddQuiz = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canManageQuizzes) return;
     if (!newTitle.trim() || !newSubject.trim() || !newDate) return;
 
     let targetType = 'specific_branches';
@@ -453,6 +489,10 @@ export default function QuizList({
         body: JSON.stringify(payload),
       });
       const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || 'Failed to schedule quiz');
+        return;
+      }
       if (data.quiz) {
         const created: QuizItem = {
           id: data.quiz._id || `quiz-${Date.now()}`,
@@ -462,12 +502,8 @@ export default function QuizList({
         setQuizzes(prev => [created, ...prev]);
       }
     } catch {
-      const created: QuizItem = {
-        id: `quiz-local-${Date.now()}`,
-        ...payload,
-        status: 'upcoming',
-      };
-      setQuizzes(prev => [created, ...prev]);
+      alert('Failed to schedule quiz');
+      return;
     }
 
     setShowAddModal(false);
@@ -483,14 +519,23 @@ export default function QuizList({
 
   // Delete Quiz
   const handleDeleteQuiz = async (id: string) => {
-    setQuizzes(prev => prev.filter(q => q.id !== id));
+    if (!canManageQuizzes) return;
     try {
-      await fetch(`/api/quizzes?id=${id}`, { method: 'DELETE' });
-    } catch {}
+      const res = await fetch(`/api/quizzes?id=${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        setQuizzes(prev => prev.filter(q => q.id !== id));
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Failed to delete quiz');
+      }
+    } catch {
+      alert('Failed to delete quiz');
+    }
   };
 
   // Edit Quiz
   const startEditing = (quiz: QuizItem) => {
+    if (!canManageQuizzes) return;
     setEditingQuizId(quiz.id);
     setEditTitle(quiz.title);
     setEditSubject(quiz.subject);
@@ -502,27 +547,11 @@ export default function QuizList({
   };
 
   const saveEditing = async (id: string) => {
+    if (!canManageQuizzes) return;
     if (!editTitle.trim()) return;
 
-    setQuizzes(prev =>
-      prev.map(q =>
-        q.id === id
-          ? {
-              ...q,
-              title: editTitle.trim(),
-              subject: editSubject.trim(),
-              date: editDate,
-              time: editTime.trim(),
-              room: editRoom.trim(),
-              description: editDesc.trim(),
-              targetLabel: editTargetLabel.trim() || q.targetLabel,
-            }
-          : q
-      )
-    );
-
     try {
-      await fetch('/api/quizzes', {
+      const res = await fetch('/api/quizzes', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -536,7 +565,32 @@ export default function QuizList({
           targetLabel: editTargetLabel.trim(),
         }),
       });
-    } catch {}
+      if (!res.ok) {
+        const data = await res.json();
+        alert(data.error || 'Failed to update quiz');
+        return;
+      }
+
+      setQuizzes(prev =>
+        prev.map(q =>
+          q.id === id
+            ? {
+                ...q,
+                title: editTitle.trim(),
+                subject: editSubject.trim(),
+                date: editDate,
+                time: editTime.trim(),
+                room: editRoom.trim(),
+                description: editDesc.trim(),
+                targetLabel: editTargetLabel.trim() || q.targetLabel,
+              }
+            : q
+        )
+      );
+    } catch {
+      alert('Failed to update quiz');
+      return;
+    }
 
     setEditingQuizId(null);
   };
@@ -549,18 +603,28 @@ export default function QuizList({
       }
       if (selectedTargetFilter !== 'all') {
         const label = (q.targetLabel || '').toLowerCase();
-        const codes = q.targetBranchCodes || [];
-        if (selectedTargetFilter === 'all_first_years' && !(q.targetType === 'all_first_years' || label.includes('all 1st') || label.includes('all first'))) {
+        const codes = (q.targetBranchCodes || []).map(c => c.toUpperCase());
+        const isAll1stYears =
+          q.targetType === 'all_first_years' ||
+          label.includes('all 1st') ||
+          label.includes('all first') ||
+          (q.year === 1 && (codes.includes('ALL') || (codes.includes('CSE') && codes.includes('ECE'))));
+
+        if (selectedTargetFilter === 'all_first_years' && !isAll1stYears) {
           return false;
         }
-        if (selectedTargetFilter === 'aids' && !codes.includes('AI&DS') && !label.includes('ai&ds')) {
-          return false;
+        if (selectedTargetFilter === 'aids') {
+          const matches = isAll1stYears || codes.includes('AI&DS') || codes.includes('AIDS') || label.includes('ai&ds') || label.includes('aids') || codes.includes('ALL');
+          if (!matches) return false;
         }
-        if (selectedTargetFilter === 'cse' && !codes.includes('CSE') && !label.includes('cse')) {
-          return false;
+        if (selectedTargetFilter === 'cse') {
+          const matches = isAll1stYears || codes.includes('CSE') || label.includes('cse') || codes.includes('ALL');
+          if (!matches) return false;
         }
-        if (selectedTargetFilter === 'ece' && !codes.includes('ECE') && !label.includes('ece')) {
-          return false;
+        if (selectedTargetFilter === 'ece') {
+          // ECE 1st year are part of all 1st years!
+          const matches = isAll1stYears || codes.includes('ECE') || label.includes('ece') || codes.includes('ALL');
+          if (!matches) return false;
         }
       }
       if (searchQuery.trim()) {
@@ -609,14 +673,22 @@ export default function QuizList({
             </p>
           </div>
 
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="btn-primary text-xs py-1.5 px-3.5 flex items-center gap-1.5 self-start sm:self-auto shadow-2xs"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Schedule Quiz</span>
-          </button>
+          {canManageQuizzes ? (
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="btn-primary text-xs py-1.5 px-3.5 flex items-center gap-1.5 self-start sm:self-auto shadow-2xs font-semibold"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Schedule Batch Quiz</span>
+            </button>
+          ) : (
+            <span className="badge bg-slate-100 text-slate-700 border-slate-200 text-xs font-semibold flex items-center gap-1.5 self-start sm:self-auto py-1.5 px-3 rounded-xl shadow-2xs">
+              <ShieldCheck className="w-3.5 h-3.5 text-purple-600" />
+              <span>Admin Scheduled Assessments</span>
+            </span>
+          )}
         </div>
+
 
         {/* Top Dropdowns: Separate Course/Branch and Year filters (when showFilters is true) */}
         {showFilters && (
@@ -749,7 +821,7 @@ export default function QuizList({
       </div>
 
       {/* Add Quiz Modal Form with Batch Targeting */}
-      {showAddModal && (
+      {canManageQuizzes && showAddModal && (
         <form
           onSubmit={handleAddQuiz}
           className="card p-5 sm:p-6 bg-gradient-to-br from-purple-50/50 via-white to-slate-50 border-purple-200 space-y-4 animate-slide-up shadow-sm"
@@ -1140,7 +1212,13 @@ export default function QuizList({
                           {quiz.totalMarks} Marks
                         </span>
                       )}
+
+                      <span className="badge bg-slate-50 text-slate-500 border-slate-200 text-[10px] font-medium flex items-center gap-1">
+                        <ShieldCheck className="w-2.5 h-2.5 text-purple-600" />
+                        Admin Scheduled
+                      </span>
                     </div>
+
 
                     {/* Title */}
                     <h3 className="text-base font-bold text-slate-900 tracking-tight">
@@ -1212,22 +1290,24 @@ export default function QuizList({
                       </button>
                     </div>
 
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => startEditing(quiz)}
-                        className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition-colors"
-                        title="Edit quiz"
-                      >
-                        <Edit3 className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteQuiz(quiz.id)}
-                        className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors"
-                        title="Delete quiz"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
+                    {canManageQuizzes && (
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => startEditing(quiz)}
+                          className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition-colors"
+                          title="Edit quiz"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteQuiz(quiz.id)}
+                          className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors"
+                          title="Delete quiz"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

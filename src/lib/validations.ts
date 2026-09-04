@@ -28,7 +28,11 @@ export const timetableEntrySchema = z.object({
 });
 
 export const assignmentSchema = z.object({
-  branchId: z.union([z.string().min(1), z.number()]),
+  branchId: z.union([z.string().min(1), z.number()]).optional().nullable(),
+  targetBranches: z.array(z.string()).optional(),
+  targetBranchCodes: z.array(z.string()).optional(),
+  targetType: z.string().optional(),
+  targetLabel: z.string().optional(),
   year: z.coerce.number().int().min(1).max(5),
   section: z.string().optional().nullable(),
   subject: z.string().min(1, 'Subject is required'),
@@ -38,7 +42,29 @@ export const assignmentSchema = z.object({
   priority: z.enum(['low', 'medium', 'high', 'urgent']).default('medium'),
 });
 
+export const quizSchema = z.object({
+  branchId: z.union([z.string().min(1), z.number()]).optional().nullable(),
+  targetBranches: z.array(z.string()).optional(),
+  targetBranchCodes: z.array(z.string()).optional(),
+  targetType: z.string().optional(),
+  targetLabel: z.string().optional(),
+  targetPresetId: z.string().optional(),
+  year: z.coerce.number().int().min(1).max(5).default(1),
+  section: z.string().optional().nullable(),
+  subject: z.string().min(1, 'Subject is required'),
+  title: z.string().min(1, 'Title is required'),
+  description: z.string().optional().nullable(),
+  date: z.string().min(1, 'Date is required'),
+  time: z.string().optional().nullable(),
+  room: z.string().optional().nullable(),
+  totalMarks: z.coerce.number().optional().nullable(),
+  weightage: z.string().optional().nullable(),
+  topics: z.array(z.string()).optional(),
+  status: z.enum(['upcoming', 'completed', 'cancelled']).default('upcoming'),
+});
+
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type TimetableEntryInput = z.infer<typeof timetableEntrySchema>;
 export type AssignmentInput = z.infer<typeof assignmentSchema>;
+export type QuizInput = z.infer<typeof quizSchema>;

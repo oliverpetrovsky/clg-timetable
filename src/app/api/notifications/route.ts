@@ -29,6 +29,15 @@ export async function GET() {
         $or: [{ year: user.year }, { year: null }, { year: { $exists: false } }],
       });
     }
+    // Global notifications (all branches / all 1st years)
+    orConditions.push({
+      branchId: null,
+      $or: [{ year: user.year }, { year: null }, { year: { $exists: false } }],
+    });
+    orConditions.push({
+      branchId: { $exists: false },
+      $or: [{ year: user.year }, { year: null }, { year: { $exists: false } }],
+    });
 
     const query = orConditions.length > 0 ? { $or: orConditions } : {};
 
@@ -86,6 +95,14 @@ export async function PUT(req: NextRequest) {
           $or: [{ year: user.year }, { year: null }, { year: { $exists: false } }],
         });
       }
+      orConditions.push({
+        branchId: null,
+        $or: [{ year: user.year }, { year: null }, { year: { $exists: false } }],
+      });
+      orConditions.push({
+        branchId: { $exists: false },
+        $or: [{ year: user.year }, { year: null }, { year: { $exists: false } }],
+      });
 
       if (orConditions.length > 0) {
         await Notification.updateMany({ $or: orConditions }, { $set: { isRead: true } });

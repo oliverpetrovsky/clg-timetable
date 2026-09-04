@@ -33,6 +33,9 @@ interface Assignment {
   branch_name: string;
   branch_code: string;
   created_by_name: string;
+  targetType?: string;
+  targetBranchCodes?: string[];
+  targetLabel?: string;
   // User tracking status (merged if available)
   user_status?: 'pending' | 'in_progress' | 'completed';
 }
@@ -506,6 +509,12 @@ export default function AssignmentList({
                       <span className="badge bg-slate-100 text-slate-700 border-slate-200/80">
                         {assignment.subject}
                       </span>
+
+                      {assignment.targetLabel && (
+                        <span className="badge bg-indigo-50 text-indigo-700 border-indigo-200 text-[11px] font-semibold">
+                          🎯 {assignment.targetLabel}
+                        </span>
+                      )}
 
                       {/* Due date pill */}
                       <span className={`badge border text-xs ${dueInfo.className}`}>
