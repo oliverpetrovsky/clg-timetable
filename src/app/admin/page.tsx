@@ -227,7 +227,7 @@ export default function AdminPage() {
         fetchTimetable(defaultBranch, 1, 'A');
         fetchAssignments(defaultBranch, 1);
       }
-      if (userData.user.role === 'superadmin') {
+      if (userData.user.role === 'superadmin' || userData.user.role === 'admin') {
         fetchUsers();
       }
       setLoading(false);
@@ -503,24 +503,29 @@ export default function AdminPage() {
     } catch {}
   };
 
-  // Superadmin Role Update
-  const handleRoleChange = async (userId: string, newRole: string, newBranchId?: string | null) => {
+  // User Management Updates (Branch, Year, Section, Role)
+  const handleUpdateUser = async (userId: string, updates: { role?: string; branchId?: string | null; year?: number | null; section?: string | null }) => {
     try {
-      const payload: any = { userId, role: newRole };
-      if (newBranchId !== undefined) {
-        payload.branchId = newBranchId;
-      }
       const res = await fetch('/api/admin/users', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ userId, ...updates }),
       });
+      const data = await res.json();
       if (res.ok) {
-        setMessage({ text: 'User role updated successfully', type: 'success' });
+        setMessage({ text: 'User details updated successfully', type: 'success' });
         fetchUsers();
         fetchStats();
+      } else {
+        setMessage({ text: data.error || 'Failed to update user', type: 'error' });
       }
-    } catch {}
+    } catch {
+      setMessage({ text: 'Failed to update user', type: 'error' });
+    }
+  };
+
+  const handleRoleChange = async (userId: string, newRole: string, newBranchId?: string | null) => {
+    await handleUpdateUser(userId, { role: newRole, branchId: newBranchId });
   };
 
   if (loading) {
@@ -661,20 +666,18 @@ export default function AdminPage() {
             <span>Manage Quizzes & Batches</span>
           </button>
 
-          {isSuperAdmin && (
-            <button
-              type="button"
-              onClick={() => setActiveTab('users')}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                activeTab === 'users'
-                  ? 'bg-white text-slate-900 shadow-sm border border-slate-200/90 ring-1 ring-black/5'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/70'
-              }`}
-            >
-              <Users className="w-4 h-4 text-purple-600 shrink-0" />
-              <span>Users & Permissions</span>
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => setActiveTab('users')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              activeTab === 'users'
+                ? 'bg-white text-slate-900 shadow-sm border border-slate-200/90 ring-1 ring-black/5'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-white/70'
+            }`}
+          >
+            <Users className="w-4 h-4 text-purple-600 shrink-0" />
+            <span>Manage Users & Roles</span>
+          </button>
         </div>
 
         {/* ===================== TAB: OVERVIEW ===================== */}
@@ -1066,11 +1069,11 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* ===================== TAB: USERS & ROLES (SUPERADMIN) ===================== */}
-        {activeTab === 'users' && isSuperAdmin && (
+        {/* ===================== TAB: USERS & ROLES ===================== */}
+        {activeTab === 'users' && (
 
           <div className="space-y-6 animate-fade-in">
-            <div className="card p-4 sm:p-5 flex items-center justify-between gap-4">
+            <div className="card p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="relative w-full sm:w-72">
                 <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
@@ -1081,6 +1084,9 @@ export default function AdminPage() {
                   className="input-field text-xs pl-10 py-2"
                 />
               </div>
+              <p className="text-xs text-slate-500 font-medium">
+                Tip: You can change any student or admin's branch, year, section, or administrative role directly below.
+              </p>
             </div>
 
             <div className="card overflow-hidden">
@@ -1091,6 +1097,7 @@ export default function AdminPage() {
                       <th className="p-4">User</th>
                       <th className="p-4">Email</th>
                       <th className="p-4">Role</th>
+                      <th className="p-4">Assigned Branch</th>
                       <th className="p-4">Batch / Section</th>
                       <th className="p-4 text-right">Actions</th>
                     </tr>
@@ -1099,7 +1106,7 @@ export default function AdminPage() {
                     {usersList
                       .filter(u => !userSearch || u.name?.toLowerCase().includes(userSearch.toLowerCase()) || u.email?.toLowerCase().includes(userSearch.toLowerCase()))
                       .map(u => (
-                        <tr key={u.id || u._id} className="hover:bg-slate-50/50">
+                        <tr key={u.id || u._id} className="hover:bg-slate-50/50 transition-colors">
                           <td className="p-4 font-semibold text-slate-900">{u.name}</td>
                           <td className="p-4 text-slate-500 font-mono">{u.email}</td>
                           <td className="p-4">
@@ -1110,21 +1117,53 @@ export default function AdminPage() {
                               {u.role}
                             </span>
                           </td>
-                          <td className="p-4 text-slate-600">
-                            {u.branch_code || 'All'} • Year {u.year || '-'} Sec {u.section || '-'}
+                          <td className="p-4">
+                            <select
+                              value={u.branchId || ''}
+                              onChange={e => handleUpdateUser(u.id || u._id, { branchId: e.target.value })}
+                              className="select-field text-xs py-1.5 px-2.5 font-semibold text-slate-800 bg-white border border-slate-200 rounded-lg shadow-2xs hover:border-indigo-400 focus:ring-2 focus:ring-indigo-100 cursor-pointer min-w-[130px]"
+                            >
+                              <option value="">No Branch</option>
+                              {branches.map(b => (
+                                <option key={b.id || (b as any)._id} value={b.id || (b as any)._id}>
+                                  {b.code} ({b.name})
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+                          <td className="p-4">
+                            <div className="flex items-center gap-1.5">
+                              <select
+                                value={u.year || 1}
+                                onChange={e => handleUpdateUser(u.id || u._id, { year: parseInt(e.target.value) })}
+                                className="select-field text-xs py-1.5 px-2 text-slate-700 bg-white border border-slate-200 rounded-lg shadow-2xs cursor-pointer min-w-[80px]"
+                              >
+                                {[1, 2, 3, 4, 5].map(y => (
+                                  <option key={y} value={y}>Year {y}</option>
+                                ))}
+                              </select>
+                              <select
+                                value={u.section || 'A'}
+                                onChange={e => handleUpdateUser(u.id || u._id, { section: e.target.value })}
+                                className="select-field text-xs py-1.5 px-2 text-slate-700 bg-white border border-slate-200 rounded-lg shadow-2xs cursor-pointer min-w-[75px]"
+                              >
+                                <option value="A">Sec A</option>
+                                <option value="B">Sec B</option>
+                              </select>
+                            </div>
                           </td>
                           <td className="p-4 text-right">
                             {u.role === 'student' ? (
                               <button
                                 onClick={() => handleRoleChange(u.id || u._id, 'admin', u.branchId)}
-                                className="text-xs font-semibold text-indigo-600 hover:text-indigo-900 bg-indigo-50 px-2.5 py-1 rounded-lg"
+                                className="text-xs font-semibold text-indigo-600 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1.5 rounded-lg transition-all"
                               >
-                                Promote to Branch Admin
+                                Promote to Admin
                               </button>
                             ) : u.role === 'admin' ? (
                               <button
                                 onClick={() => handleRoleChange(u.id || u._id, 'student', u.branchId)}
-                                className="text-xs font-semibold text-slate-500 hover:text-slate-700 bg-slate-100 px-2.5 py-1 rounded-lg"
+                                className="text-xs font-semibold text-slate-500 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 px-2.5 py-1.5 rounded-lg transition-all"
                               >
                                 Demote to Student
                               </button>

@@ -6,7 +6,7 @@ import mongoose from 'mongoose';
 
 export async function GET() {
   const user = await getCurrentUser();
-  if (!user || user.role !== 'superadmin') {
+  if (!user || (user.role !== 'admin' && user.role !== 'superadmin')) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
   }
 
@@ -41,30 +41,43 @@ export async function GET() {
 
 export async function PUT(req: NextRequest) {
   const user = await getCurrentUser();
-  if (!user || user.role !== 'superadmin') {
+  if (!user || (user.role !== 'admin' && user.role !== 'superadmin')) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
   }
 
   try {
-    const { userId, role, branchId } = await req.json();
+    const { userId, role, branchId, year, section } = await req.json();
 
-    if (!userId || !role) {
-      return NextResponse.json({ error: 'userId and role are required' }, { status: 400 });
+    if (!userId) {
+      return NextResponse.json({ error: 'userId is required' }, { status: 400 });
     }
 
-    if (!['student', 'admin', 'superadmin'].includes(role)) {
+    if (role && !['student', 'admin', 'superadmin'].includes(role)) {
       return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
+    }
+
+    if (role === 'superadmin' && user.role !== 'superadmin') {
+      return NextResponse.json({ error: 'Only superadmins can assign superadmin role' }, { status: 403 });
     }
 
     await connectToDatabase();
 
-    const updateFields: Record<string, any> = { role };
+    const updateFields: Record<string, any> = {};
+    if (role) {
+      updateFields.role = role;
+    }
     if (branchId !== undefined) {
       if (branchId && mongoose.Types.ObjectId.isValid(branchId)) {
         updateFields.branchId = new mongoose.Types.ObjectId(branchId);
       } else if (branchId === null || branchId === '') {
         updateFields.branchId = null;
       }
+    }
+    if (year !== undefined) {
+      updateFields.year = year ? Number(year) : null;
+    }
+    if (section !== undefined) {
+      updateFields.section = section ? section.toString().toUpperCase().trim() : null;
     }
 
     await User.findByIdAndUpdate(userId, { $set: updateFields });
