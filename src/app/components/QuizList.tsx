@@ -109,8 +109,8 @@ const TARGET_PRESETS = [
   },
   {
     id: 'aids_only',
-    label: 'AI&DS Year 1 Only',
-    shortLabel: 'AI&DS Year 1',
+    label: 'AI&DS Year 1 (Section B)',
+    shortLabel: '🤖 AI&DS Year 1',
     type: 'specific_branches',
     branches: ['AI&DS'],
     year: 1,
@@ -120,12 +120,22 @@ const TARGET_PRESETS = [
   {
     id: 'cse_sec_a',
     label: 'CSE Year 1 (Section A)',
-    shortLabel: 'CSE Sec A',
+    shortLabel: '💻 CSE Sec A',
     type: 'specific_branches',
     branches: ['CSE'],
     year: 1,
     section: 'A',
     badgeColor: 'bg-blue-50 text-blue-700 border-blue-200',
+  },
+  {
+    id: 'ece_only',
+    label: 'ECE Year 1 (Section B)',
+    shortLabel: '⚡ ECE Year 1',
+    type: 'specific_branches',
+    branches: ['ECE'],
+    year: 1,
+    section: 'B',
+    badgeColor: 'bg-emerald-50 text-emerald-700 border-emerald-200',
   },
   {
     id: 'sec_b_ece_aids',
@@ -467,13 +477,15 @@ export default function QuizList({
       targetLabel = `${targetBranchCodes.join(' & ')} Year ${targetYear}${targetSection !== 'ALL' ? ` (Sec ${targetSection})` : ''}`;
     }
 
+    const resolvedBranchId = branchId || currentUser?.branchId || currentUser?.branch_id || '1';
     const payload = {
-      branchId: branchId || '1',
+      branchId: resolvedBranchId,
       year: targetYear,
       section: targetSection,
       targetType,
       targetBranchCodes,
       targetLabel,
+      targetPresetId: selectedPresetId,
       title: newTitle.trim(),
       subject: newSubject.trim(),
       date: newDate,

@@ -57,7 +57,28 @@ export async function getCurrentUser(): Promise<UserPayload | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get('auth-token')?.value;
   if (!token) return null;
-  return verifyToken(token);
+  const payload = await verifyToken(token);
+  if (!payload || !payload.id) return null;
+
+  try {
+    await connectToDatabase();
+    const user = await User.findById(payload.id).lean();
+    if (user) {
+      return {
+        id: user._id.toString(),
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        branchId: user.branchId ? user.branchId.toString() : null,
+        year: user.year || null,
+        section: user.section || null,
+      };
+    }
+  } catch (err) {
+    console.error('Error in getCurrentUser database query:', err);
+  }
+
+  return payload;
 }
 
 export async function getUserById(id: string): Promise<UserPayload | null> {

@@ -235,7 +235,8 @@ export async function POST(req: NextRequest) {
         const allBranches = await Branch.find({ code: { $in: ['CSE', 'ECE', 'AI&DS'] } });
         branchObjectIds = allBranches.map(b => b._id as mongoose.Types.ObjectId);
       } else {
-        const branches = await Branch.find({ code: { $in: codes } });
+        const branchCodesToFind = codes.flatMap(c => (c === 'AI&DS' || c === 'AIDS' ? ['AI&DS', 'AIDS'] : [c]));
+        const branches = await Branch.find({ code: { $in: branchCodesToFind } });
         branchObjectIds = branches.map(b => b._id as mongoose.Types.ObjectId);
       }
     }
@@ -262,6 +263,10 @@ export async function POST(req: NextRequest) {
         });
         if (bDoc) primaryBranchId = bDoc._id as mongoose.Types.ObjectId;
       }
+    }
+
+    if (!primaryBranchId && user.branchId && mongoose.Types.ObjectId.isValid(user.branchId)) {
+      primaryBranchId = new mongoose.Types.ObjectId(user.branchId);
     }
 
     if (!primaryBranchId) {
