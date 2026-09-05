@@ -178,7 +178,7 @@ export default function QuizList({
   // Add Quiz Form State
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedPresetId, setSelectedPresetId] = useState('all_first_years');
-  const [customBranches, setCustomBranches] = useState<string[]>(['AI&DS']);
+  const [customBranches, setCustomBranches] = useState<string[]>(['CSE']);
   const [customYear, setCustomYear] = useState(1);
   const [customSection, setCustomSection] = useState('ALL');
   const [newTitle, setNewTitle] = useState('');
@@ -217,6 +217,9 @@ export default function QuizList({
       .then(([branchData, batchData, authData]) => {
         if (authData?.user) {
           setCurrentUser(authData.user);
+          if (authData.user.branch_code) {
+            setCustomBranches([authData.user.branch_code]);
+          }
         }
         const list = (branchData.branches || []).filter((b: any) => ['CSE', 'ECE', 'AI&DS'].includes(b.code));
         setBranches(list);

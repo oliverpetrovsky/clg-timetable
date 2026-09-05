@@ -29,6 +29,7 @@ export async function GET() {
       created_at: u.createdAt ? u.createdAt.toISOString() : new Date().toISOString(),
       branch_name: u.branchId?.name || '',
       branch_code: u.branchId?.code || '',
+      branchId: u.branchId?._id ? u.branchId._id.toString() : (u.branchId ? u.branchId.toString() : null),
     }));
 
     return NextResponse.json({ users });
@@ -58,8 +59,12 @@ export async function PUT(req: NextRequest) {
     await connectToDatabase();
 
     const updateFields: Record<string, any> = { role };
-    if (branchId && mongoose.Types.ObjectId.isValid(branchId)) {
-      updateFields.branchId = new mongoose.Types.ObjectId(branchId);
+    if (branchId !== undefined) {
+      if (branchId && mongoose.Types.ObjectId.isValid(branchId)) {
+        updateFields.branchId = new mongoose.Types.ObjectId(branchId);
+      } else if (branchId === null || branchId === '') {
+        updateFields.branchId = null;
+      }
     }
 
     await User.findByIdAndUpdate(userId, { $set: updateFields });

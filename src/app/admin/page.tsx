@@ -504,12 +504,16 @@ export default function AdminPage() {
   };
 
   // Superadmin Role Update
-  const handleRoleChange = async (userId: string, newRole: string, newBranchId?: string) => {
+  const handleRoleChange = async (userId: string, newRole: string, newBranchId?: string | null) => {
     try {
+      const payload: any = { userId, role: newRole };
+      if (newBranchId !== undefined) {
+        payload.branchId = newBranchId;
+      }
       const res = await fetch('/api/admin/users', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, role: newRole, branchId: newBranchId }),
+        body: JSON.stringify(payload),
       });
       if (res.ok) {
         setMessage({ text: 'User role updated successfully', type: 'success' });
@@ -1112,14 +1116,14 @@ export default function AdminPage() {
                           <td className="p-4 text-right">
                             {u.role === 'student' ? (
                               <button
-                                onClick={() => handleRoleChange(u.id || u._id, 'admin', mgmtBranchId)}
+                                onClick={() => handleRoleChange(u.id || u._id, 'admin', u.branchId)}
                                 className="text-xs font-semibold text-indigo-600 hover:text-indigo-900 bg-indigo-50 px-2.5 py-1 rounded-lg"
                               >
                                 Promote to Branch Admin
                               </button>
                             ) : u.role === 'admin' ? (
                               <button
-                                onClick={() => handleRoleChange(u.id || u._id, 'student')}
+                                onClick={() => handleRoleChange(u.id || u._id, 'student', u.branchId)}
                                 className="text-xs font-semibold text-slate-500 hover:text-slate-700 bg-slate-100 px-2.5 py-1 rounded-lg"
                               >
                                 Demote to Student

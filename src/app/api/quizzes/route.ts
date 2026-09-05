@@ -269,17 +269,6 @@ export async function POST(req: NextRequest) {
       if (defaultBranch) primaryBranchId = defaultBranch._id as mongoose.Types.ObjectId;
     }
 
-    // Permission check: Admins can schedule for entire batches or batches containing their branch
-    const isEntireBatchTarget = isEntireFirstYears || isAllBatches || isAllBranchYear || targetBranchCodes.includes('ALL');
-    const includesAdminBranch = user.branchId && branchObjectIds.some(bId => bId.toString() === user.branchId);
-
-    if (user.role === 'admin' && user.branchId && !isEntireBatchTarget && !includesAdminBranch && primaryBranchId && user.branchId !== primaryBranchId.toString()) {
-      return NextResponse.json(
-        { error: 'You can only schedule quizzes for your own branch or entire batches' },
-        { status: 403 }
-      );
-    }
-
     // Auto-generate target label if not supplied
     if (!targetLabel) {
       if (targetType === 'all_first_years') {
@@ -368,21 +357,6 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: 'Quiz not found' }, { status: 404 });
     }
 
-    const isEntireBatch =
-      quiz.targetType === 'all_first_years' ||
-      quiz.targetType === 'all' ||
-      quiz.targetType === 'all_branch_year' ||
-      quiz.targetBranchCodes?.includes('ALL');
-
-    const includesAdminBranch =
-      user.branchId &&
-      ((quiz.branchId && quiz.branchId.toString() === user.branchId) ||
-        (quiz.targetBranches && quiz.targetBranches.some((b: any) => b.toString() === user.branchId)));
-
-    if (user.role === 'admin' && user.branchId && !isEntireBatch && !includesAdminBranch) {
-      return NextResponse.json({ error: 'You can only modify quizzes for your branch or entire batches' }, { status: 403 });
-    }
-
     const updateFields: Record<string, any> = {};
     if (updates.title !== undefined) updateFields.title = updates.title;
     if (updates.subject !== undefined) updateFields.subject = updates.subject;
@@ -423,21 +397,6 @@ export async function DELETE(req: NextRequest) {
     const quiz = await Quiz.findById(id);
     if (!quiz) {
       return NextResponse.json({ error: 'Quiz not found' }, { status: 404 });
-    }
-
-    const isEntireBatch =
-      quiz.targetType === 'all_first_years' ||
-      quiz.targetType === 'all' ||
-      quiz.targetType === 'all_branch_year' ||
-      quiz.targetBranchCodes?.includes('ALL');
-
-    const includesAdminBranch =
-      user.branchId &&
-      ((quiz.branchId && quiz.branchId.toString() === user.branchId) ||
-        (quiz.targetBranches && quiz.targetBranches.some((b: any) => b.toString() === user.branchId)));
-
-    if (user.role === 'admin' && user.branchId && !isEntireBatch && !includesAdminBranch) {
-      return NextResponse.json({ error: 'You can only delete quizzes for your branch or entire batches' }, { status: 403 });
     }
 
     await Quiz.findByIdAndDelete(id);
